@@ -57,5 +57,6 @@ async def health_check(db: AsyncSession = Depends(get_db)):
             detail=f"Database probe failed: {str(err)}",
         )
     
-app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["Authentication"])
-app.include_router(telemetry.router, prefix=f"{settings.API_V1_STR}/telemetry", tags=["Telemetry & Risk Engine"])
+
+app.include_router(auth.router, prefix=settings.API_V1_STR)
+app.include_router(telemetry.router, prefix=settings.API_V1_STR)

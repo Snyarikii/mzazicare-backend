@@ -35,3 +35,13 @@ class AuthTokenResponse(BaseModel):
     step_up_required: bool = False
     anomaly_detected: bool = False
     uts_score: float = 0.10
+
+class RegisterInitiateRequest(BaseModel):
+    email: EmailStr
+    full_name: str
+    password: str
+    role: str = "caregiver"
+
+class VerifyEmailRequest(BaseModel):
+    email: EmailStr
+    otp_code: str
