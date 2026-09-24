@@ -1,13 +1,14 @@
 import uuid
 from datetime import datetime
 from pydantic import BaseModel, EmailStr, Field
+from typing import Optional, Dict, Any
 
 class UserRegisterRequest(BaseModel):
     email: EmailStr
     full_name: str = Field(..., min_length=2, max_length=100)
     password: str = Field(..., min_length=6)
     role: str = Field("caregiver", pattern="^(caregiver|family|admin)$")
-    patient_linking_code: str | None = None
+    patient_linking_code: Optional[str] = None
 
 
 class UserLoginRequest(BaseModel):
@@ -16,6 +17,7 @@ class UserLoginRequest(BaseModel):
     device_fingerprint: str = Field(..., min_length=4)
     ip_address: str | None = "127.0.0.1"
     geolocation: str | None = "Nairobi, KE"
+    raw_features: Optional[Dict[str, Any]] = None
 
 class UserResponse(BaseModel):
     user_id: uuid.UUID
@@ -45,3 +47,13 @@ class RegisterInitiateRequest(BaseModel):
 class VerifyEmailRequest(BaseModel):
     email: EmailStr
     otp_code: str
+
+class VerifyMfaRequest(BaseModel):
+    email: EmailStr
+    otp_code: str
+    device_fingerprint: str
+    device_model: Optional[str] = None
+    os_name: Optional[str] = None
+
+class ResendMfaRequest(BaseModel):
+    email: EmailStr

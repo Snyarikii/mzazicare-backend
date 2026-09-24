@@ -6,7 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.db.session import engine, get_db
-from app.api.v1.endpoints import auth, telemetry
+from app.api.v1.endpoints import auth, caregiver, family, patients, telemetry
+from app.services.risk_engine import risk_engine
 
 
 
@@ -19,7 +20,14 @@ async def lifespan(app: FastAPI):
         print("Connected to PostgreSQL Docker container successfully")
     except Exception as exc:
         print(f"Database connection error on startup: {exc}")
+
+    # Verify Risk engine model deployment
+    if risk_engine.model is not None:
+        print("[Risk Engine] Random Forest model is Loaded in memory and ready.", flush=True)
+    else:
+        print("[Risk Engine] Model artifact not found. Operating in heuristic mode.", flush=True)
     yield
+    
     # Dispose connection pool on shutdown
     await engine.dispose()
 
@@ -60,3 +68,6 @@ async def health_check(db: AsyncSession = Depends(get_db)):
 
 app.include_router(auth.router, prefix=settings.API_V1_STR)
 app.include_router(telemetry.router, prefix=settings.API_V1_STR)
+app.include_router(patients.router, prefix=f"{settings.API_V1_STR}/patients", tags=["patients"])
+app.include_router(family.router, prefix=settings.API_V1_STR)
+app.include_router(caregiver.router, prefix=settings.API_V1_STR)

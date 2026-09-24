@@ -3,3 +3,6 @@ __pycache__/
 *.pyc
 .env
 .pytest_cache/
+ml/data/rba-dataset.csv
+ml/data/file.csv
+ml/data/logon.csv

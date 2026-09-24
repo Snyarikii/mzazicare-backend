@@ -7,4 +7,7 @@ from app.models.entities import (
     BehavioralBaseline,
     TrustEvaluation,
     SecurityAlert,
+    BehavioralAuditLog,
+    ElderlyProfile,
+    CareSession,
 )

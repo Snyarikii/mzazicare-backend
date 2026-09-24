@@ -68,3 +68,65 @@ def send_verification_email(to_email: str, full_name: str, otp_code: str):
             print(f" Email sent to {to_email}", flush=True)
     except Exception as e:
         print(f" Failed to send email to {to_email}: {e}", flush=True)
+
+def send_mfa_email(to_email: str, full_name: str, otp_code: str, device_model: str = "Mobile Device"):
+    """Sends an HTML email with the 6-digit OTP code for Step-Up Risk-Based Authentication."""
+    if not SMTP_USER or not SMTP_PASSWORD:
+        print(f"[MAIL MOCK] SMTP not configured. MFA Step-Up OTP for {to_email} is: {otp_code}", flush=True)
+        return
+
+    msg = EmailMessage()
+    msg["Subject"] = f"{otp_code} is your MzaziCare security code"
+    msg["From"] = f"{EMAILS_FROM_NAME} <{SMTP_USER}>"
+    msg["To"] = to_email
+
+    msg.set_content(
+        f"Hello {full_name},\n\n"
+        f"A sign-in attempt requires security verification on {device_model}.\n\n"
+        f"Your one-time security code is: {otp_code}\n\n"
+        f"This code will expire in 10 minutes.\n"
+        f"If you did not attempt this login, please secure your credentials immediately."
+    )
+
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f8fafc; margin:0; padding: 30px;">
+            <div style="max-width: 500px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; padding: 32px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+                <div style="display: flex; align-items: center; margin-bottom: 20px;">
+                    <h2 style="color: #0f172a; margin: 0; font-size: 20px; font-weight: 700;">Security Verification Required</h2>
+                </div>
+                <p style="color: #475569; font-size: 15px; line-height: 24px; margin-top: 0;">
+                    Hello <strong>{full_name}</strong>,<br/>
+                    Our adaptive risk engine detected a sign-in attempt from <strong>{device_model}</strong> with elevated security parameters.
+                </p>
+                <p style="color: #475569; font-size: 15px; line-height: 24px;">
+                    Please enter this 6-digit one-time passcode on your device to confirm your identity:
+                </p>
+                <div style="background-color: #f0fdfa; border: 1px dashed #0d9488; border-radius: 8px; padding: 18px; text-align: center; margin: 24px 0;">
+                    <span style="font-size: 34px; font-weight: 800; letter-spacing: 8px; color: #0f766e; font-family: monospace;">
+                        {otp_code}
+                    </span>
+                </div>
+                <p style="color: #64748b; font-size: 13px; line-height: 20px;">
+                    ⏳ This code is single-use and expires in <strong>10 minutes</strong>.
+                </p>
+                <div style="margin-top: 24px; padding: 12px 16px; background-color: #fef2f2; border-left: 4px solid #ef4444; border-radius: 4px;">
+                    <p style="color: #991b1b; font-size: 12px; margin: 0; line-height: 18px;">
+                        <strong>Didn't sign in?</strong> If you did not perform this action, someone may know your password. Change your credentials immediately.
+                    </p>
+                </div>
+            </div>
+        </body>
+    </html>
+    """
+    msg.add_alternative(html_content, subtype="html")
+
+    context = ssl.create_default_context()
+    try:
+        with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, context=context) as server:
+            server.login(SMTP_USER, SMTP_PASSWORD)
+            server.send_message(msg)
+            print(f"🔒 MFA security email sent to {to_email}", flush=True)
+    except Exception as e:
+        print(f"❌ Failed to send MFA email to {to_email}: {e}", flush=True)
