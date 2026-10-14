@@ -50,3 +50,52 @@ class CareSessionResponse(BaseModel):
 class CareSessionComplete(BaseModel):
     vitals_recorded: dict[str, Any] | None = None
     encounter_notes: str | None = None
+
+
+class ElderlySummary(BaseModel):
+    id: int
+    elderly_id: int
+    full_name: str
+    age: int
+    care_tier: str
+    chronic_conditions: list[str]
+    residence_address: str | None
+
+
+class AvailableCareSession(BaseModel):
+    id: int
+    session_id: int
+    elderly_id: int
+    scheduled_date: datetime
+    service_tier: str
+    special_instructions: str | None
+    status: str
+    elder: ElderlySummary
+
+
+class CaregiverSessionResponse(CareSessionResponse):
+    session_id: int
+    elder: ElderlySummary
+
+
+class EncounterLog(BaseModel):
+    id: int
+    scheduled_date: datetime
+    service_tier: str
+    vitals_recorded: dict[str, Any] | None
+    encounter_notes: str | None
+    completed_at: datetime | None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PatientProfile(ElderlyProfileCreate):
+    id: int
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PatientRecords(BaseModel):
+    elder: PatientProfile
+    encounter_history: list[EncounterLog]
