@@ -1,4 +1,3 @@
-%%writefile ml/train_ueba_autoencoder.py
 import os
 import argparse
 import numpy as np
