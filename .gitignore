@@ -2,6 +2,7 @@ venv/
 __pycache__/
 *.pyc
 .env
+.env.example
 .pytest_cache/
 ml/data/rba-dataset.csv
 ml/data/file.csv

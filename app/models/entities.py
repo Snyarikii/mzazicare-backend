@@ -15,7 +15,9 @@ class User(Base):
     )
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
     full_name: Mapped[str] = mapped_column(String(100), nullable=False)
-    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    auth_provider: Mapped[str] = mapped_column(String(20), default="google", nullable=False)
+    google_sub: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
     role: Mapped[str] = mapped_column(String(20), nullable=False)  # 'caregiver', 'family', 'admin'
     status: Mapped[str] = mapped_column(String(20), default="ACTIVE", nullable=False)
     created_at: Mapped[datetime] = mapped_column(
@@ -23,6 +25,7 @@ class User(Base):
     )
     mfa_code = Column(String(6), nullable=True)
     mfa_expires_at = Column(DateTime, nullable=True)
+    mfa_device_fingerprint = Column(String(128), nullable=True)
 
     # Relationships
     contextual_logins = relationship("ContextualLogin", back_populates="user", cascade="all, delete-orphan")
@@ -177,6 +180,7 @@ class UserDeviceProfile(Base):
     # lifecycle state: 'NEW', 'PROBATIONARY', 'TRUSTED', 'REVOKED
     trust_state = Column(String(32), default="NEW", nullable=False)
     successful_login_count = Column(Integer, default=0, nullable=False)
+    refresh_jti = Column(String(64), nullable=True)
 
     # Hardware metadata for security audits & UI display
     device_model = Column(String(64), nullable=True)

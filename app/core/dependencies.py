@@ -10,7 +10,7 @@ from app.core.config import settings
 from app.db.session import get_db
 from app.models.entities import User
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/google")
 
 
 async def get_current_active_user(token: str = Depends(oauth2_scheme),
@@ -20,6 +20,8 @@ async def get_current_active_user(token: str = Depends(oauth2_scheme),
                           headers={"WWW-Authenticate": "Bearer"})
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        if payload.get("token_type") != "access":
+            raise ValueError("Only access tokens authorize API requests")
         subject = uuid.UUID(payload.get("sub", ""))
     except (jwt.PyJWTError, ValueError, TypeError):
         raise error

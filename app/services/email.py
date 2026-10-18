@@ -12,6 +12,10 @@ SMTP_USER = os.getenv("SMTP_USER", "")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
 EMAILS_FROM_NAME = os.getenv("EMAILS_FROM_NAME", "MzaziCare Health")
 
+
+def mfa_email_configured() -> bool:
+    return bool(SMTP_USER and SMTP_PASSWORD)
+
 def send_verification_email(to_email: str, full_name: str, otp_code: str):
     """Sends an HTML email with the 6-digit OTP code"""
 
@@ -71,9 +75,8 @@ def send_verification_email(to_email: str, full_name: str, otp_code: str):
 
 def send_mfa_email(to_email: str, full_name: str, otp_code: str, device_model: str = "Mobile Device"):
     """Sends an HTML email with the 6-digit OTP code for Step-Up Risk-Based Authentication."""
-    if not SMTP_USER or not SMTP_PASSWORD:
-        print(f"[MAIL MOCK] SMTP not configured. MFA Step-Up OTP for {to_email} is: {otp_code}", flush=True)
-        return
+    if not mfa_email_configured():
+        raise RuntimeError("SMTP is required for email MFA delivery.")
 
     msg = EmailMessage()
     msg["Subject"] = f"{otp_code} is your MzaziCare security code"
@@ -113,7 +116,7 @@ def send_mfa_email(to_email: str, full_name: str, otp_code: str, device_model: s
                 </p>
                 <div style="margin-top: 24px; padding: 12px 16px; background-color: #fef2f2; border-left: 4px solid #ef4444; border-radius: 4px;">
                     <p style="color: #991b1b; font-size: 12px; margin: 0; line-height: 18px;">
-                        <strong>Didn't sign in?</strong> If you did not perform this action, someone may know your password. Change your credentials immediately.
+                        <strong>Didn't sign in?</strong> If you did not perform this action, review the security of your Google account.
                     </p>
                 </div>
             </div>
@@ -130,3 +133,4 @@ def send_mfa_email(to_email: str, full_name: str, otp_code: str, device_model: s
             print(f"🔒 MFA security email sent to {to_email}", flush=True)
     except Exception as e:
         print(f"❌ Failed to send MFA email to {to_email}: {e}", flush=True)
+        raise

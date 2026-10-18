@@ -29,7 +29,9 @@ python create_tables.py
 
 `create_tables.py` creates tables from the current SQLAlchemy models; it is intended for initial local setup, not schema migrations.
 
-Email delivery is optional for local development. To send verification and MFA codes through SMTP, set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, and `SMTP_PASSWORD` in `.env`. When SMTP credentials are absent, the development mail service prints codes to the server console.
+Google sign-in requires `GOOGLE_CLIENT_IDS` (or `GOOGLE_CLIENT_ID` for one ID) in `.env`, set to the allowed OAuth client ID. Set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, and `SMTP_PASSWORD` for step-up email delivery. The API refuses MFA challenges when SMTP credentials are missing.
+
+For an existing database, apply [the Google auth migration](migrations/20261017_google_auth.sql) before starting the updated API. It makes `users.password_hash` nullable and adds Google identity, MFA device binding, and refresh rotation fields. New databases created with `create_tables.py` already include these columns.
 
 ## Run the API
 
@@ -47,7 +49,7 @@ All application routes are under `/api/v1`. Protected routes require a bearer to
 
 | Prefix | Purpose |
 | --- | --- |
-| `/api/v1/auth` | Registration, email verification, login, and MFA |
+| `/api/v1/auth` | Google sign-in, biometric session re-evaluation, email MFA, and logout |
 | `/api/v1/family` | Elder profiles and care visit bookings for family users |
 | `/api/v1/caregiver` | Available requests, exclusive acceptance, assigned sessions, patient records, and visit completion |
 | `/api/v1/telemetry` | Behavioral and context risk evaluation |

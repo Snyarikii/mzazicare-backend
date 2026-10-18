@@ -1,23 +1,7 @@
 import uuid
 from datetime import datetime
 from pydantic import BaseModel, EmailStr, Field
-from typing import Optional, Dict, Any
-
-class UserRegisterRequest(BaseModel):
-    email: EmailStr
-    full_name: str = Field(..., min_length=2, max_length=100)
-    password: str = Field(..., min_length=6)
-    role: str = Field("caregiver", pattern="^(caregiver|family|admin)$")
-    patient_linking_code: Optional[str] = None
-
-
-class UserLoginRequest(BaseModel):
-    email: EmailStr
-    password: str
-    device_fingerprint: str = Field(..., min_length=4)
-    ip_address: str | None = "127.0.0.1"
-    geolocation: str | None = "Nairobi, KE"
-    raw_features: Optional[Dict[str, Any]] = None
+from typing import Optional, Dict, Any, Literal
 
 class UserResponse(BaseModel):
     user_id: uuid.UUID
@@ -30,7 +14,9 @@ class UserResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 class AuthTokenResponse(BaseModel):
+    status: Literal["LOGGED_IN"] = "LOGGED_IN"
     access_token: str
+    refresh_token: Optional[str] = None
     token_type: str = "bearer"
     role: str
     user: UserResponse
@@ -38,15 +24,16 @@ class AuthTokenResponse(BaseModel):
     anomaly_detected: bool = False
     uts_score: float = 0.10
 
-class RegisterInitiateRequest(BaseModel):
-    email: EmailStr
-    full_name: str
-    password: str
-    role: str = "caregiver"
 
-class VerifyEmailRequest(BaseModel):
+class GoogleProfile(BaseModel):
     email: EmailStr
-    otp_code: str
+    name: str
+    sub: str
+
+
+class NeedsRegistrationResponse(BaseModel):
+    status: Literal["NEEDS_REGISTRATION"] = "NEEDS_REGISTRATION"
+    google_profile: GoogleProfile
 
 class VerifyMfaRequest(BaseModel):
     email: EmailStr
@@ -57,3 +44,23 @@ class VerifyMfaRequest(BaseModel):
 
 class ResendMfaRequest(BaseModel):
     email: EmailStr
+
+
+class GoogleAuthRequest(BaseModel):
+    id_token: str
+    role: Optional[str] = None
+    device_fingerprint: str = Field(..., min_length=4)
+    ip_address: Optional[str] = "127.0.0.1"
+    geolocation: Optional[str] = None
+    raw_features: Optional[Dict[str, Any]] = None
+
+
+class BiometricUnlockRequest(BaseModel):
+    refresh_token: str
+    device_fingerprint: str = Field(..., min_length=4)
+    raw_features: Dict[str, Any]
+    ip_address: Optional[str] = "127.0.0.1"
+
+
+class LogoutRequest(BaseModel):
+    refresh_token: str
