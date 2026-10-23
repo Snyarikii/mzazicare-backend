@@ -33,11 +33,15 @@ Google sign-in requires `GOOGLE_CLIENT_IDS` (or `GOOGLE_CLIENT_ID` for one ID) i
 
 For an existing database, apply [the Google auth migration](migrations/20261017_google_auth.sql) before starting the updated API. It makes `users.password_hash` nullable and adds Google identity, MFA device binding, and refresh rotation fields. New databases created with `create_tables.py` already include these columns.
 
+Apply [the caregiver verification migration](migrations/20261023_caregiver_verification.sql) to existing databases before starting this API. It adds verification fields, marks existing caregivers as pending, approves family accounts, and seeds a mock registry. Fresh databases initialized with `create_tables.py` also receive the sample registry entries.
+
 ## Run the API
 
 ```powershell
-uvicorn main:app --reload --port 8000
+.\venv\Scripts\python.exe -X utf8 -m uvicorn main:app --reload --reload-dir app --host 0.0.0.0 --port 8000
 ```
+
+Run this from the repository root. Using `python -m uvicorn` through the project virtual environment ensures Uvicorn and SQLAlchemy come from the same installation.
 
 - Health check: `http://127.0.0.1:8000/api/v1/health`
 - Interactive API docs: `http://127.0.0.1:8000/docs`
@@ -50,12 +54,16 @@ All application routes are under `/api/v1`. Protected routes require a bearer to
 | Prefix | Purpose |
 | --- | --- |
 | `/api/v1/auth` | Google sign-in, biometric session re-evaluation, email MFA, and logout |
+| `/api/v1/auth/register-family` | Complete a new family registration after Google identity verification |
 | `/api/v1/family` | Elder profiles and care visit bookings for family users |
 | `/api/v1/caregiver` | Available requests, exclusive acceptance, assigned sessions, patient records, and visit completion |
+| `/api/v1/caregivers/verify` | Complete a new caregiver registration after Google ID token and mock license checks |
 | `/api/v1/telemetry` | Behavioral and context risk evaluation |
 | `/api/v1/patients` | Synthetic patient records used by the existing demo workflow |
 
-Caregiver patient records are available only to a caregiver assigned to a qualifying care session. Accepting a request removes it from the unassigned queue; completing a visit saves vitals and encounter notes with the session.
+Caregiver routes require an approved license verification. Patient records are available only to a caregiver assigned to a qualifying care session. Accepting a request removes it from the unassigned queue; completing a visit saves vitals and encounter notes with the session.
+
+For a new Google account, `/api/v1/auth/google` returns `NEEDS_REGISTRATION` without creating a user. Family accounts are created by `/api/v1/auth/register-family`. Caregiver accounts are created only after `/api/v1/caregivers/verify` validates the Google ID token, active license, and registered name. Existing pending caregiver accounts can use the authenticated `/api/v1/caregiver/verify` route.
 
 ## Tests
 

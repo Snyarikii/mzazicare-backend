@@ -9,6 +9,9 @@ class UserResponse(BaseModel):
     full_name: str
     role: str
     status: str
+    license_number: Optional[str] = None
+    is_verified: bool
+    verification_status: str
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -28,7 +31,7 @@ class AuthTokenResponse(BaseModel):
 class GoogleProfile(BaseModel):
     email: EmailStr
     name: str
-    sub: str
+    google_id: str
 
 
 class NeedsRegistrationResponse(BaseModel):

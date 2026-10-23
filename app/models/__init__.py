@@ -1,6 +1,7 @@
 from app.models.entities import (
     Base,
     User,
+    MockCaregiverRegistry,
     ContextualLogin,
     CareLog,
     SessionActivityLog,

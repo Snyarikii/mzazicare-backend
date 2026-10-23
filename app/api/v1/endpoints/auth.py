@@ -9,7 +9,8 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from fastapi.concurrency import run_in_threadpool
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token as google_id_token
-from sqlalchemy import select
+from sqlalchemy import case, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -135,17 +136,14 @@ def _challenge(user: User, fingerprint: str, raw: dict,
     )
 
 
-@router.post("/google", response_model=AuthTokenResponse | NeedsRegistrationResponse)
-async def google_auth(payload: GoogleAuthRequest, background_tasks: BackgroundTasks,
-                      db: AsyncSession = Depends(get_db)):
+async def verify_google_id_token(id_token: str) -> tuple[str, str, str]:
     configured_ids = settings.GOOGLE_CLIENT_IDS or settings.GOOGLE_CLIENT_ID
     client_ids = [value.strip() for value in configured_ids.split(",") if value.strip()]
     if not client_ids:
         raise HTTPException(status_code=503, detail="Google Sign-In is not configured.")
     try:
-        # Google verifies signature, issuer, and expiry; audience is checked against our allowlist.
         claims = await run_in_threadpool(
-            google_id_token.verify_oauth2_token, payload.id_token, google_requests.Request()
+            google_id_token.verify_oauth2_token, id_token, google_requests.Request()
         )
     except Exception as exc:
         raise HTTPException(status_code=401, detail="Invalid Google ID token.") from exc
@@ -154,32 +152,55 @@ async def google_auth(payload: GoogleAuthRequest, background_tasks: BackgroundTa
     email, name, sub = claims.get("email"), claims.get("name"), claims.get("sub")
     if not email or not sub:
         raise HTTPException(status_code=401, detail="Google profile is incomplete.")
+    return email, name or email, sub
 
-    user = (await db.execute(select(User).where(User.email == email))).scalar_one_or_none()
+
+async def find_google_account(db: AsyncSession, email: str, sub: str) -> User | None:
+    result = await db.execute(
+        select(User)
+        .where((User.google_sub == sub) | (User.email == email))
+        .order_by(case((User.google_sub == sub, 0), else_=1))
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
+
+
+async def create_google_account(
+    db: AsyncSession, *, email: str, name: str, sub: str, role: str,
+    fingerprint: str, raw: dict | None = None, ip_address: str | None = None,
+    geolocation: str | None = None, license_number: str | None = None,
+) -> AuthTokenResponse:
+    user = User(
+        email=email, full_name=name, role=role, status="ACTIVE",
+        auth_provider="google", google_sub=sub, license_number=license_number,
+        is_verified=role == "family" or license_number is not None,
+        verification_status="APPROVED",
+    )
+    db.add(user)
+    try:
+        await db.flush()
+        profile = _enroll_or_update(db, user, fingerprint, None, raw or {})
+        _audit(db, user, fingerprint, ip_address, geolocation, 0.10, True)
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail="Google account is already registered.") from exc
+    return _response(user, fingerprint, 0.10, profile=profile)
+
+
+@router.post("/google", response_model=AuthTokenResponse | NeedsRegistrationResponse)
+async def google_auth(payload: GoogleAuthRequest, background_tasks: BackgroundTasks,
+                      db: AsyncSession = Depends(get_db)):
+    email, name, sub = await verify_google_id_token(payload.id_token)
+
+    user = await find_google_account(db, email, sub)
     raw = payload.raw_features or {}
     if user is None:
-        if payload.role is None:
-            return NeedsRegistrationResponse(
-                google_profile=GoogleProfile(email=email, name=name or email, sub=sub)
-            )
-        if payload.role not in ("family", "caregiver"):
+        if payload.role is not None and payload.role not in ("family", "caregiver"):
             raise HTTPException(status_code=400, detail="Select Family Member or Caregiver to register.")
-        user = User(email=email, full_name=name or email, role=payload.role,
-                    status="ACTIVE", auth_provider="google", google_sub=sub)
-        db.add(user)
-        await db.flush()
-        profile = _enroll_or_update(db, user, payload.device_fingerprint, None, raw)
-        _audit(db, user, payload.device_fingerprint, payload.ip_address,
-               payload.geolocation, 0.10, True)
-        await db.commit()
-        _log_risk_assessment(
-            "Google registration", user.user_id,
-            {"uts_score": 0.10, "step_up_required": False,
-             "anomaly_detected": False,
-             "reasons": ["First verified Google registration; device enrolled as PROBATIONARY"]},
-            source="Registration baseline (risk engine not invoked)",
+        return NeedsRegistrationResponse(
+            google_profile=GoogleProfile(email=email, name=name, google_id=sub)
         )
-        return _response(user, payload.device_fingerprint, 0.10, profile=profile)
 
     if user.status != "ACTIVE":
         raise HTTPException(status_code=403, detail="Account is inactive.")
@@ -188,6 +209,8 @@ async def google_auth(payload: GoogleAuthRequest, background_tasks: BackgroundTa
     # A verified Google email migrates an existing password-era account once.
     user.google_sub = sub
     user.auth_provider = "google"
+    if name:
+        user.full_name = name
     profile = await _device(db, user, payload.device_fingerprint)
     if profile is not None and profile.trust_state == "REVOKED":
         raise HTTPException(status_code=403, detail="Device access has been revoked.")
@@ -211,6 +234,19 @@ async def google_auth(payload: GoogleAuthRequest, background_tasks: BackgroundTa
            payload.geolocation, score, True)
     await db.commit()
     return _response(user, payload.device_fingerprint, score, profile=profile)
+
+
+@router.post("/register-family", response_model=AuthTokenResponse)
+async def register_family(payload: GoogleAuthRequest, db: AsyncSession = Depends(get_db)):
+    email, name, sub = await verify_google_id_token(payload.id_token)
+    existing = await find_google_account(db, email, sub)
+    if existing is not None:
+        raise HTTPException(status_code=409, detail="Google account is already registered.")
+    return await create_google_account(
+        db, email=email, name=name, sub=sub, role="family",
+        fingerprint=payload.device_fingerprint, raw=payload.raw_features,
+        ip_address=payload.ip_address, geolocation=payload.geolocation,
+    )
 
 
 @router.post("/biometric-unlock", response_model=AuthTokenResponse)

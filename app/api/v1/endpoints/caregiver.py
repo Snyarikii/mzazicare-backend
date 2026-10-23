@@ -1,12 +1,20 @@
 from datetime import datetime, timezone
+import unicodedata
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel, Field
 from sqlalchemy import case, exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import get_current_active_user
+from app.core.dependencies import (
+    ensure_verified_caregiver, get_current_active_user, get_current_verified_caregiver,
+)
 from app.db.session import get_db
-from app.models.entities import CareSession, ElderlyProfile, User
+from app.models.entities import CareSession, ElderlyProfile, MockCaregiverRegistry, User
+from app.api.v1.endpoints.auth import (
+    create_google_account, find_google_account, verify_google_id_token,
+)
+from app.schemas.auth import AuthTokenResponse, UserResponse
 from app.schemas.family import (
     AvailableCareSession,
     CareSessionComplete,
@@ -17,11 +25,85 @@ from app.schemas.family import (
 )
 
 router = APIRouter(prefix="/caregiver", tags=["caregiver sessions"])
+verification_router = APIRouter(prefix="/caregivers", tags=["caregiver verification"])
 
 
-def require_caregiver(user: User) -> None:
-    if user.role != "caregiver":
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Caregiver account required")
+class LicenseVerificationRequest(BaseModel):
+    google_id_token: str
+    license_number: str = Field(..., max_length=100)
+    device_fingerprint: str = Field(default="registration-device", min_length=4)
+    raw_features: dict | None = None
+    ip_address: str | None = None
+    geolocation: str | None = None
+
+
+class ExistingLicenseVerificationRequest(BaseModel):
+    license_number: str = Field(..., max_length=100)
+
+
+class LicenseVerificationResponse(BaseModel):
+    status: str
+    user: UserResponse
+
+
+def normalized_name(name: str) -> str:
+    return " ".join(unicodedata.normalize("NFKC", name).casefold().split())
+
+
+async def active_registry_entry(db: AsyncSession, license_number: str) -> MockCaregiverRegistry:
+    registry = (await db.execute(
+        select(MockCaregiverRegistry).where(
+            MockCaregiverRegistry.license_number == license_number,
+            MockCaregiverRegistry.status == "ACTIVE",
+        )
+    )).scalar_one_or_none()
+    if registry is None:
+        raise HTTPException(status_code=400, detail="License number is invalid or unregistered.")
+    return registry
+
+
+def check_registered_name(registry: MockCaregiverRegistry, full_name: str) -> None:
+    if normalized_name(registry.full_name) != normalized_name(full_name):
+        raise HTTPException(status_code=403, detail="License number is registered under a different name.")
+
+
+@verification_router.post("/verify", response_model=AuthTokenResponse)
+async def verify_license(
+    payload: LicenseVerificationRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    email, name, sub = await verify_google_id_token(payload.google_id_token)
+    existing = await find_google_account(db, email, sub)
+    if existing is not None:
+        raise HTTPException(status_code=409, detail="Google account is already registered.")
+    license_number = payload.license_number.strip().upper()
+    registry = await active_registry_entry(db, license_number)
+    check_registered_name(registry, name)
+    return await create_google_account(
+        db, email=email, name=name, sub=sub, role="caregiver",
+        fingerprint=payload.device_fingerprint, raw=payload.raw_features,
+        ip_address=payload.ip_address, geolocation=payload.geolocation,
+        license_number=license_number,
+    )
+
+
+@router.post("/verify", response_model=LicenseVerificationResponse)
+async def verify_existing_license(
+    payload: ExistingLicenseVerificationRequest,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if current_user.role != "caregiver":
+        raise HTTPException(status_code=403, detail="Caregiver account required.")
+    license_number = payload.license_number.strip().upper()
+    registry = await active_registry_entry(db, license_number)
+    check_registered_name(registry, current_user.full_name)
+    current_user.license_number = license_number
+    current_user.is_verified = True
+    current_user.verification_status = "APPROVED"
+    await db.commit()
+    await db.refresh(current_user)
+    return {"status": "APPROVED", "user": current_user}
 
 
 def elder_summary(elder: ElderlyProfile) -> ElderlySummary:
@@ -46,10 +128,10 @@ def session_response(session: CareSession, elder: ElderlyProfile) -> CaregiverSe
 
 @router.get("/available-sessions", response_model=list[AvailableCareSession])
 async def available_sessions(
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_verified_caregiver),
     db: AsyncSession = Depends(get_db),
 ):
-    require_caregiver(current_user)
+    ensure_verified_caregiver(current_user)
     result = await db.execute(
         select(
             CareSession.id,
@@ -98,10 +180,10 @@ async def available_sessions(
 @router.post("/sessions/{session_id}/accept", response_model=CaregiverSessionResponse)
 async def accept_session(
     session_id: int,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_verified_caregiver),
     db: AsyncSession = Depends(get_db),
 ):
-    require_caregiver(current_user)
+    ensure_verified_caregiver(current_user)
     result = await db.execute(
         select(CareSession).where(CareSession.id == session_id).with_for_update()
     )
@@ -121,10 +203,10 @@ async def accept_session(
 
 @router.get("/my-sessions", response_model=list[CaregiverSessionResponse])
 async def my_sessions(
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_verified_caregiver),
     db: AsyncSession = Depends(get_db),
 ):
-    require_caregiver(current_user)
+    ensure_verified_caregiver(current_user)
     result = await db.execute(
         select(CareSession, ElderlyProfile)
         .join(ElderlyProfile, CareSession.elderly_id == ElderlyProfile.id)
@@ -137,10 +219,10 @@ async def my_sessions(
 @router.get("/patients/{elderly_id}/records", response_model=PatientRecords)
 async def patient_records(
     elderly_id: int,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_verified_caregiver),
     db: AsyncSession = Depends(get_db),
 ):
-    require_caregiver(current_user)
+    ensure_verified_caregiver(current_user)
     authorized = await db.scalar(
         select(
             exists().where(
@@ -171,10 +253,10 @@ async def patient_records(
 async def complete_session(
     session_id: int,
     payload: CareSessionComplete,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_verified_caregiver),
     db: AsyncSession = Depends(get_db),
 ):
-    require_caregiver(current_user)
+    ensure_verified_caregiver(current_user)
     result = await db.execute(select(CareSession).where(CareSession.id == session_id).with_for_update())
     session = result.scalar_one_or_none()
     if session is None:

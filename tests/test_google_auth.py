@@ -45,7 +45,8 @@ class FakeDb:
 def existing_user():
     return User(user_id=uuid.uuid4(), email="member@example.com", full_name="Member",
                 role="family", status="ACTIVE", auth_provider="google",
-                google_sub="google-sub", created_at=datetime.now(timezone.utc))
+                google_sub="google-sub", is_verified=True,
+                verification_status="APPROVED", created_at=datetime.now(timezone.utc))
 
 
 class GoogleAuthTests(unittest.IsolatedAsyncioTestCase):
@@ -61,7 +62,7 @@ class GoogleAuthTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.status, "NEEDS_REGISTRATION")
         self.assertEqual(response.google_profile.email, "member@example.com")
         self.assertEqual(response.google_profile.name, "Member")
-        self.assertEqual(response.google_profile.sub, "google-sub")
+        self.assertEqual(response.google_profile.google_id, "google-sub")
         self.assertEqual(db.commits, 0)
 
     async def test_registration_rejects_invalid_role(self):
@@ -76,7 +77,7 @@ class GoogleAuthTests(unittest.IsolatedAsyncioTestCase):
                 await auth.google_auth(payload, BackgroundTasks(), db)
         self.assertEqual(error.exception.status_code, 400)
 
-    async def test_new_google_user_gets_device_bound_session(self):
+    async def test_new_google_user_with_role_is_not_written_until_completion(self):
         db = FakeDb(None)
         payload = GoogleAuthRequest(id_token="id", role="family", device_fingerprint="device-1")
         with patch.object(auth.settings, "GOOGLE_CLIENT_IDS", "client-id"), \
@@ -85,12 +86,40 @@ class GoogleAuthTests(unittest.IsolatedAsyncioTestCase):
                  "email": "member@example.com", "name": "Member", "sub": "google-sub",
              })):
             response = await auth.google_auth(payload, BackgroundTasks(), db)
-        self.assertFalse(response.step_up_required)
+        self.assertEqual(response.status, "NEEDS_REGISTRATION")
+        self.assertEqual(response.google_profile.google_id, "google-sub")
+        self.assertEqual(db.commits, 0)
+        self.assertEqual(db.added, [])
+
+    async def test_family_completion_creates_device_bound_session(self):
+        db = FakeDb(None)
+        payload = GoogleAuthRequest(id_token="id", role="family", device_fingerprint="device-1")
+        with patch.object(auth.settings, "GOOGLE_CLIENT_IDS", "client-id"), \
+             patch.object(auth, "run_in_threadpool", new=AsyncMock(return_value={
+                 "aud": "client-id", "email_verified": True,
+                 "email": "member@example.com", "name": "Member", "sub": "google-sub",
+             })):
+            response = await auth.register_family(payload, db)
         self.assertEqual(response.status, "LOGGED_IN")
-        self.assertEqual(response.uts_score, 0.10)
         self.assertTrue(response.access_token and response.refresh_token)
+        self.assertTrue(response.user.is_verified)
+        self.assertEqual(db.commits, 1)
         self.assertEqual(next(x for x in db.added if isinstance(x, UserDeviceProfile)).trust_state,
                          "PROBATIONARY")
+
+    async def test_verified_caregiver_completion_creates_approved_session(self):
+        db = FakeDb()
+        response = await auth.create_google_account(
+            db, email="stephen@example.com", name="Stephen Nyariki",
+            sub="google-sub-caregiver", role="caregiver", fingerprint="device-1",
+            license_number="CG-2026-001",
+        )
+        self.assertEqual(response.role, "caregiver")
+        self.assertTrue(response.user.is_verified)
+        self.assertEqual(response.user.verification_status, "APPROVED")
+        self.assertEqual(response.user.license_number, "CG-2026-001")
+        self.assertTrue(response.access_token and response.refresh_token)
+        self.assertEqual(db.commits, 1)
 
     async def test_high_risk_google_login_dispatches_email_without_token(self):
         user = existing_user()

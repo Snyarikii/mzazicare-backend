@@ -8,7 +8,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.core.dependencies import get_current_active_user
+from app.core.dependencies import get_current_verified_caregiver
 from app.models.entities import User
 
 router = APIRouter()
@@ -100,7 +100,7 @@ _BY_ID = {patient["id"]: patient for patient in _PATIENTS}
 
 
 @router.get("", summary="List geriatric patient records")
-async def list_patients(current_user: User = Depends(get_current_active_user)) -> list[dict[str, Any]]:
+async def list_patients(current_user: User = Depends(get_current_verified_caregiver)) -> list[dict[str, Any]]:
     """Return synthetic elderly care profiles for the authenticated workflow."""
     del current_user
     fields = ("id", "full_name", "age", "chronic_conditions", "care_tier",
@@ -110,7 +110,7 @@ async def list_patients(current_user: User = Depends(get_current_active_user)) -
 
 @router.get("/{patient_id}", summary="Get a detailed geriatric care profile")
 async def get_patient(patient_id: int,
-                      current_user: User = Depends(get_current_active_user)) -> dict[str, Any]:
+                      current_user: User = Depends(get_current_verified_caregiver)) -> dict[str, Any]:
     """Return a synthetic geriatric clinical file, or 404 for an unknown identifier."""
     del current_user
     patient = _BY_ID.get(patient_id)

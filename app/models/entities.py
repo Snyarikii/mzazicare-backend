@@ -10,6 +10,15 @@ from app.db.base import Base
 class User(Base):
     __tablename__ = "users"
 
+    def __init__(self, **kwargs):
+        if kwargs.get("role") == "family":
+            kwargs.setdefault("is_verified", True)
+            kwargs.setdefault("verification_status", "APPROVED")
+        elif kwargs.get("role") == "caregiver":
+            kwargs.setdefault("is_verified", False)
+            kwargs.setdefault("verification_status", "PENDING")
+        super().__init__(**kwargs)
+
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
@@ -20,6 +29,11 @@ class User(Base):
     google_sub: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
     role: Mapped[str] = mapped_column(String(20), nullable=False)  # 'caregiver', 'family', 'admin'
     status: Mapped[str] = mapped_column(String(20), default="ACTIVE", nullable=False)
+    license_number: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    is_verified: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
+    verification_status: Mapped[str] = mapped_column(
+        String(20), default="PENDING", server_default="PENDING", nullable=False
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
     )
@@ -34,6 +48,18 @@ class User(Base):
     trust_evaluations = relationship("TrustEvaluation", back_populates="user", cascade="all, delete-orphan")
     baseline = relationship("BehavioralBaseline", back_populates="user", uselist=False, cascade="all, delete-orphan")
     behavioral_audit_logs = relationship("BehavioralAuditLog", back_populates="user", cascade="all, delete-orphan")
+
+
+class MockCaregiverRegistry(Base):
+    __tablename__ = "mock_caregiver_registry"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    license_number: Mapped[str] = mapped_column(String(100), unique=True, index=True, nullable=False)
+    full_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), default="ACTIVE", server_default="ACTIVE", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
+    )
 
 
 class ContextualLogin(Base):

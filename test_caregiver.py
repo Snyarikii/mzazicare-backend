@@ -42,7 +42,8 @@ def session_record():
 
 class CaregiverAccessTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
-        self.caregiver = SimpleNamespace(role="caregiver", user_id=uuid4())
+        self.caregiver = SimpleNamespace(role="caregiver", user_id=uuid4(),
+                                         is_verified=True, verification_status="APPROVED")
         self.database = MagicMock()
         self.database.execute = AsyncMock(return_value=MagicMock())
         self.database.scalar = AsyncMock()
@@ -52,7 +53,8 @@ class CaregiverAccessTests(unittest.IsolatedAsyncioTestCase):
         self.database.get.return_value = elder_record()
 
     async def test_family_cannot_list_available_sessions(self):
-        family = SimpleNamespace(role="family", user_id=uuid4())
+        family = SimpleNamespace(role="family", user_id=uuid4(),
+                                 is_verified=True, verification_status="APPROVED")
         with self.assertRaises(HTTPException) as raised:
             await available_sessions(family, self.database)
         self.assertEqual(raised.exception.status_code, 403)

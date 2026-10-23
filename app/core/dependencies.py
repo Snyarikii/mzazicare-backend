@@ -30,3 +30,19 @@ async def get_current_active_user(token: str = Depends(oauth2_scheme),
     if user is None or user.status != "ACTIVE":
         raise error
     return user
+
+
+def ensure_verified_caregiver(user: User) -> None:
+    if (user.role != "caregiver" or not user.is_verified
+            or user.verification_status != "APPROVED"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Verified caregiver account required.",
+        )
+
+
+async def get_current_verified_caregiver(
+    user: User = Depends(get_current_active_user),
+) -> User:
+    ensure_verified_caregiver(user)
+    return user
