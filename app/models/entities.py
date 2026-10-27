@@ -95,6 +95,7 @@ class CareLog(Base):
     patient_id: Mapped[str] = mapped_column(String(50), nullable=False)
     care_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     task_status: Mapped[str] = mapped_column(String(30), nullable=False)
+    category: Mapped[str] = mapped_column(String(30), default="NOTE", server_default="NOTE", nullable=False)
     recorded_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
     )
@@ -207,6 +208,8 @@ class UserDeviceProfile(Base):
     trust_state = Column(String(32), default="NEW", nullable=False)
     successful_login_count = Column(Integer, default=0, nullable=False)
     refresh_jti = Column(String(64), nullable=True)
+    access_jti = Column(String(36), nullable=True)
+    access_expires_at = Column(DateTime(timezone=True), nullable=True)
 
     # Hardware metadata for security audits & UI display
     device_model = Column(String(64), nullable=True)
@@ -220,6 +223,19 @@ class UserDeviceProfile(Base):
     __table_args__ = (
         UniqueConstraint("user_id", "device_fingerprint", name="uq_user_device_fingerprint"),
     )
+
+
+class TokenBlacklist(Base):
+    __tablename__ = "token_blacklist"
+
+    jti: Mapped[str] = mapped_column(String(36), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.user_id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    revoked_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
+    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
 
 
 class BehavioralAuditLog(Base):
@@ -275,6 +291,7 @@ class CareSession(Base):
         UUID(as_uuid=True), ForeignKey("users.user_id", ondelete="SET NULL"), nullable=True, index=True
     )
     scheduled_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    end_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     service_tier: Mapped[str] = mapped_column(String(50), nullable=False)
     special_instructions: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(String(30), default="REQUESTED", nullable=False, index=True)

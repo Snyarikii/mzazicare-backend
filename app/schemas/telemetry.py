@@ -1,4 +1,5 @@
 import uuid
+from typing import Literal
 from pydantic import BaseModel, Field
 
 class TelemetryIngestRequest(BaseModel):
@@ -17,6 +18,7 @@ class TelemetryEvaluationResponse(BaseModel):
 
 
 class SessionActivityTelemetry(BaseModel):
+    session_id: str | None = Field(default=None, min_length=1, max_length=128)
     total_logons: int = Field(default=1, ge=0)
     distinct_devices: int = Field(default=1, ge=0)
     activity_span_hours: float = Field(default=1.0, ge=0.0)
@@ -27,6 +29,20 @@ class SessionActivityTelemetry(BaseModel):
 
 class BehavioralEvaluationResponse(BaseModel):
     anomaly_score: float = Field(..., ge=0.0, le=1.0)
+    risk_action: Literal["ALLOW", "CHALLENGE", "DENY"]
+    step_up_required: bool
+    access_denied: bool
+    recommend_revocation: bool
+    reasons: list[str]
     is_anomaly: bool
     session_revocation_recommended: bool
     risk_factors: list[str]
+
+
+class AnomalyResetRequest(BaseModel):
+    session_id: str = Field(..., min_length=8, max_length=128)
+
+
+class AnomalyResetResponse(BaseModel):
+    status: Literal["RESET"]
+    session_id: str

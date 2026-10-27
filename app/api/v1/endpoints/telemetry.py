@@ -3,12 +3,14 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import get_current_active_user
+from app.core.dependencies import get_current_access_claims, get_current_active_user
 from app.db.session import get_db
 from app.models.entities import BehavioralAuditLog, SessionActivityLog, TrustEvaluation, User
-from app.schemas.telemetry import (BehavioralEvaluationResponse, SessionActivityTelemetry,
+from app.schemas.telemetry import (AnomalyResetRequest, AnomalyResetResponse,
+                                   BehavioralEvaluationResponse, SessionActivityTelemetry,
                                    TelemetryEvaluationResponse, TelemetryIngestRequest)
 from app.services.behavioral_engine import behavioral_engine
+from app.services.token_blacklist import blacklist_token
 
 router = APIRouter(prefix="/telemetry", tags=["Telemetry & Risk Engine"])
 logger = logging.getLogger(__name__)
@@ -19,11 +21,14 @@ async def behavioral_check(
     payload: SessionActivityTelemetry,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
+    claims: dict = Depends(get_current_access_claims),
 ):
     evaluation = await behavioral_engine.evaluate_session_activity(
         user_id=current_user.user_id,
         metrics=payload.model_dump(),
         db=db,
+        current_jti=claims["jti"],
+        expires_at=datetime.fromtimestamp(claims["exp"], timezone.utc),
     )
     audit = BehavioralAuditLog(
         user_id=current_user.user_id,
@@ -46,10 +51,42 @@ async def behavioral_check(
                         current_user.user_id, evaluation["anomaly_score"])
     return BehavioralEvaluationResponse(**evaluation)
 
+
+@router.post("/reset-anomaly", response_model=AnomalyResetResponse)
+async def reset_anomaly(
+    payload: AnomalyResetRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    # Behavioral scoring uses client session counters. Record the client's
+    # reset acknowledgement before it starts a fresh counter window.
+    audit = BehavioralAuditLog(
+        user_id=current_user.user_id,
+        anomaly_score=0.0,
+        is_anomaly=False,
+        session_revocation_recommended=False,
+        risk_factors=["Client PIN re-verification reported; session counters reset"],
+        telemetry_snapshot={"session_id": payload.session_id, "event": "ANOMALY_RESET"},
+    )
+    try:
+        db.add(audit)
+        await db.commit()
+    except Exception as exc:
+        await db.rollback()
+        logger.exception("Could not record anomaly reset for user %s", current_user.user_id)
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                            detail="Session risk reset could not be recorded.") from exc
+    return AnomalyResetResponse(status="RESET", session_id=payload.session_id)
+
 @router.post("/context", response_model=TelemetryEvaluationResponse)
 async def ingest_session_telemetry(
-    payload: TelemetryIngestRequest, db: AsyncSession = Depends(get_db)
+    payload: TelemetryIngestRequest, db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+    claims: dict = Depends(get_current_access_claims),
 ):
+    if payload.user_id != current_user.user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="Telemetry user does not match the bearer token.")
     # Log session activity
     activity_log = SessionActivityLog(
         user_id=payload.user_id,
@@ -74,6 +111,11 @@ async def ingest_session_telemetry(
         uts = 0.12
         enforcement = "ALLOW"
         msg = "Telemetry within normal behavioral envelope."
+
+    if enforcement == "DENY":
+        await blacklist_token(claims["jti"], str(current_user.user_id),
+                              datetime.fromtimestamp(claims["exp"], timezone.utc),
+                              revoke_refresh=True)
 
     # Record Evaluation
     trust_eval = TrustEvaluation(

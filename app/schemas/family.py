@@ -27,6 +27,7 @@ class ElderlyProfileResponse(ElderlyProfileCreate):
 class CareSessionCreate(BaseModel):
     elderly_id: int
     scheduled_date: datetime
+    end_time: datetime | None = None
     service_tier: str = Field(..., min_length=1, max_length=50)
     special_instructions: str | None = None
 
@@ -37,6 +38,7 @@ class CareSessionResponse(BaseModel):
     family_user_id: UUID
     caregiver_id: UUID | None
     scheduled_date: datetime
+    end_time: datetime | None
     service_tier: str
     special_instructions: str | None
     status: str

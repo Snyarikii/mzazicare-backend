@@ -1,19 +1,28 @@
 from datetime import datetime, timedelta, timezone
 from typing import Any
+import uuid
 import jwt
 from app.core.config import settings
 
 
 def create_access_token(
-        subject: str | Any, expires_delta: timedelta | None = None
+        subject: str | Any, expires_delta: timedelta | None = None,
+        *, jti: str | None = None, expires_at: datetime | None = None,
 ) -> str:
-    if expires_delta:
+    if expires_at is not None:
+        expire = (expires_at.replace(tzinfo=timezone.utc) if expires_at.tzinfo is None
+                  else expires_at.astimezone(timezone.utc))
+    elif expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
     else:
         expire = datetime.now(timezone.utc) + timedelta(
             minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
         )
-    to_encode = {"exp": expire, "sub": str(subject), "token_type": "access"}
+    token_id = uuid.UUID(jti) if jti is not None else uuid.uuid4()
+    if token_id.version != 4:
+        raise ValueError("Access token jti must be a UUID4")
+    to_encode = {"exp": expire, "jti": str(token_id),
+                 "sub": str(subject), "token_type": "access"}
     return jwt.encode(
         to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM
     )

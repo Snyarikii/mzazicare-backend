@@ -17,7 +17,7 @@ class UserResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 class AuthTokenResponse(BaseModel):
-    status: Literal["LOGGED_IN"] = "LOGGED_IN"
+    status: Literal["LOGGED_IN", "SUCCESS", "MFA_REQUIRED"] = "LOGGED_IN"
     access_token: str
     refresh_token: Optional[str] = None
     token_type: str = "bearer"

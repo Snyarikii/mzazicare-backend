@@ -11,4 +11,5 @@ from app.models.entities import (
     BehavioralAuditLog,
     ElderlyProfile,
     CareSession,
+    TokenBlacklist,
 )

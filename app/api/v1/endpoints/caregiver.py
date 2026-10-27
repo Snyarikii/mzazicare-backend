@@ -1,7 +1,9 @@
-from datetime import datetime, timezone
+from datetime import date as date_type, datetime, time, timedelta, timezone
+import json
 import unicodedata
+from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy import case, exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,11 +12,12 @@ from app.core.dependencies import (
     ensure_verified_caregiver, get_current_active_user, get_current_verified_caregiver,
 )
 from app.db.session import get_db
-from app.models.entities import CareSession, ElderlyProfile, MockCaregiverRegistry, User
+from app.models.entities import CareLog, CareSession, ElderlyProfile, MockCaregiverRegistry, User
 from app.api.v1.endpoints.auth import (
     create_google_account, find_google_account, verify_google_id_token,
 )
 from app.schemas.auth import AuthTokenResponse, UserResponse
+from app.schemas.caregiver_activity import ScheduleVisit
 from app.schemas.family import (
     AvailableCareSession,
     CareSessionComplete,
@@ -26,6 +29,7 @@ from app.schemas.family import (
 
 router = APIRouter(prefix="/caregiver", tags=["caregiver sessions"])
 verification_router = APIRouter(prefix="/caregivers", tags=["caregiver verification"])
+NAIROBI = ZoneInfo("Africa/Nairobi")
 
 
 class LicenseVerificationRequest(BaseModel):
@@ -124,6 +128,42 @@ def session_response(session: CareSession, elder: ElderlyProfile) -> CaregiverSe
         session_id=session.id,
         elder=elder_summary(elder),
     )
+
+
+@router.get("/schedule", response_model=list[ScheduleVisit])
+async def get_caregiver_schedule(
+    date: date_type | None = Query(default=None),
+    current_user: User = Depends(get_current_verified_caregiver),
+    db: AsyncSession = Depends(get_db),
+):
+    selected_date = date or datetime.now(NAIROBI).date()
+    day_start = datetime.combine(selected_date, time.min, tzinfo=NAIROBI)
+    day_end = day_start + timedelta(days=1)
+    result = await db.execute(
+        select(CareSession, ElderlyProfile)
+        .join(ElderlyProfile, CareSession.elderly_id == ElderlyProfile.id)
+        .where(
+            CareSession.caregiver_id == current_user.user_id,
+            CareSession.status.in_(("ACCEPTED", "IN_PROGRESS", "COMPLETED")),
+            CareSession.scheduled_date >= day_start,
+            CareSession.scheduled_date < day_end,
+        )
+        .order_by(CareSession.scheduled_date.asc(), CareSession.id.asc())
+    )
+    return [
+        ScheduleVisit(
+            id=session.id,
+            patient_id=str(elder.id),
+            patient_name=elder.full_name,
+            service_type=session.service_tier,
+            start_time=session.scheduled_date,
+            end_time=session.end_time,
+            location_address=elder.residence_address,
+            status={"ACCEPTED": "UPCOMING", "IN_PROGRESS": "IN_PROGRESS", "COMPLETED": "COMPLETED"}[session.status],
+            notes=session.encounter_notes or session.special_instructions,
+        )
+        for session, elder in result.all()
+    ]
 
 
 @router.get("/available-sessions", response_model=list[AvailableCareSession])
@@ -270,6 +310,13 @@ async def complete_session(
     session.encounter_notes = payload.encounter_notes
     session.status = "COMPLETED"
     session.completed_at = datetime.now(timezone.utc)
+    db.add(CareLog(
+        user_id=current_user.user_id,
+        patient_id=str(session.elderly_id),
+        category="VISIT_COMPLETION",
+        care_notes=payload.encounter_notes or json.dumps(payload.vitals_recorded or {}),
+        task_status="RECORDED",
+    ))
     await db.commit()
     await db.refresh(session)
     elder = await db.get(ElderlyProfile, session.elderly_id)

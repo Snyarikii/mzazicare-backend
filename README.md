@@ -35,6 +35,11 @@ For an existing database, apply [the Google auth migration](migrations/20261017_
 
 Apply [the caregiver verification migration](migrations/20261023_caregiver_verification.sql) to existing databases before starting this API. It adds verification fields, marks existing caregivers as pending, approves family accounts, and seeds a mock registry. Fresh databases initialized with `create_tables.py` also receive the sample registry entries.
 
+Apply [the schedule and care logs migration](migrations/20261023_schedule_care_logs.sql) to existing databases before using `GET /api/v1/caregiver/schedule` or `GET/POST /api/v1/care-logs`. It adds an optional visit end time and a category to the existing `care_logs` table. The API accepts care logs only for patients assigned to the signed-in, verified caregiver.
+Completing a visit now also creates a `VISIT_COMPLETION` care log. Previously completed visits remain in `care_sessions`; the migration does not duplicate those historical records.
+
+Apply [the token blacklist migration](migrations/20261027_token_blacklist.sql) to existing databases before starting this version of the API. New databases initialized with `create_tables.py` include the table and device-session columns automatically. New access tokens carry a UUID4 `jti` and expiration; protected routes reject revoked tokens. Logout revokes the access token paired with the submitted device refresh token. Behavioral and risk `DENY` decisions revoke both the affected access token and its device refresh token before returning, and a new login rotates the device's previous access token. Access tokens issued before this migration have no `jti` and must sign in again.
+
 ## Run the API
 
 ```powershell

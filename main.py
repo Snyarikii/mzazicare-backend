@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.db.session import engine, get_db
-from app.api.v1.endpoints import auth, caregiver, family, patients, telemetry
+from app.api.v1.endpoints import auth, care_logs, caregiver, family, patients, telemetry
 from app.services.risk_engine import risk_engine
 
 
@@ -71,4 +71,5 @@ app.include_router(telemetry.router, prefix=settings.API_V1_STR)
 app.include_router(patients.router, prefix=f"{settings.API_V1_STR}/patients", tags=["patients"])
 app.include_router(family.router, prefix=settings.API_V1_STR)
 app.include_router(caregiver.router, prefix=settings.API_V1_STR)
+app.include_router(care_logs.router, prefix=settings.API_V1_STR)
 app.include_router(caregiver.verification_router, prefix=settings.API_V1_STR)

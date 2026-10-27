@@ -7,6 +7,8 @@ import numpy as np
 from typing import Optional, Any
 from datetime import datetime
 
+from app.services.token_blacklist import blacklist_token
+
 
 # Search for the model artifact across standard project locations
 POSSIBLE_MODEL_PATHS = [
@@ -18,6 +20,7 @@ POSSIBLE_MODEL_PATHS = [
 # Primary Facility Reference Point (Nairobi, Kenya)
 REF_LAT = -1.3032
 REF_LNG = 36.8124
+KNOWN_MALICIOUS_IPS = {"192.0.2.1", "198.51.100.45", "203.0.113.99"}
 
 
 class AdaptiveRiskEngine:
@@ -49,35 +52,39 @@ class AdaptiveRiskEngine:
         return R * c
 
     @staticmethod
-    def _inspect_ip(ip_str: str) -> dict:
+    def _inspect_ip(ip_str: str, is_flagged_ip: bool = False) -> dict:
         """Derives security features from the incoming client IP address."""
+        flagged = ip_str in KNOWN_MALICIOUS_IPS or bool(is_flagged_ip)
         if not ip_str or ip_str in ["127.0.0.1", "localhost", "::1"]:
-            return {
+            analysis = {
                 "is_loopback": True,
                 "is_private": True,
                 "is_routable": False,
                 "risk_modifier": 0.0,
             }
+        else:
+            try:
+                ip_obj = ipaddress.ip_address(ip_str)
+                is_private = ip_obj.is_private
+                is_loopback = ip_obj.is_loopback
+                analysis = {
+                    "is_loopback": is_loopback,
+                    "is_private": is_private,
+                    "is_routable": not (is_private or is_loopback),
+                    "risk_modifier": 0.0,
+                }
+            except ValueError:
+                analysis = {
+                    "is_loopback": False,
+                    "is_private": False,
+                    "is_routable": False,
+                    "risk_modifier": 0.20,  # Malformed IP syntax
+                }
 
-        try:
-            ip_obj = ipaddress.ip_address(ip_str)
-            is_private = ip_obj.is_private
-            is_loopback = ip_obj.is_loopback
-            is_routable = not (is_private or is_loopback)
-        except ValueError:
-            return {
-                "is_loopback": False,
-                "is_private": False,
-                "is_routable": False,
-                "risk_modifier": 0.20,  # Malformed IP syntax
-            }
-
-        return {
-            "is_loopback": is_loopback,
-            "is_private": is_private,
-            "is_routable": is_routable,
-            "risk_modifier": 0.0,
-        }
+        if flagged:
+            analysis["risk_modifier"] = 0.40
+        analysis["is_critical_threat"] = flagged
+        return analysis
 
     def evaluate_risk(
             self,
@@ -131,7 +138,10 @@ class AdaptiveRiskEngine:
             estimated_rtt = 180.0
 
         # 4. IP Context Analysis
-        ip_analysis = self._inspect_ip(active_ip)
+        ip_analysis = self._inspect_ip(active_ip, raw_features.get("is_flagged_ip", False))
+        is_critical_threat = ip_analysis["is_critical_threat"]
+        if is_critical_threat:
+            reasons.append("CRITICAL: IP address detected on high-risk intelligence blacklist")
 
         # 5. Geolocation / Spatial Check
         latitude = raw_features.get("latitude")
@@ -186,10 +196,11 @@ class AdaptiveRiskEngine:
             base_ml_risk = 0.40
             reasons.append("Clinical shift Context: Evening handover window dampening applied")
         elif 0 <= local_hour < 5:
-            base_ml_risk = max(base_ml_risk, 0.80)
+            base_ml_risk = max(base_ml_risk, 0.65)
             reasons.append("Clinical shift Context: Early morning high-risk window applied")
         
         device_adjustment = 0.0
+        dormant_trusted_device = False
         
         if device_profile is None or device_profile.trust_state == "NEW":
             device_adjustment = +0.10
@@ -204,26 +215,38 @@ class AdaptiveRiskEngine:
                 device_adjustment = -0.25
                 reasons.append("Recognized hardware: Trusted device discount applied (-0.25)")
             else:
-                device_adjustment = 0.00
-                reasons.append("Trusted device dormant >30 days: Discount paused")
+                device_adjustment = +0.35
+                dormant_trusted_device = True
+                reasons.append("Trusted device dormant >30 days: Inactivity step-up penalty (+0.35)")
 
         # combination of statistical risk with device trust modifier
-        preliminary_score = base_ml_risk + device_adjustment
+        preliminary_score = base_ml_risk + device_adjustment + ip_analysis["risk_modifier"]
+        if dormant_trusted_device and preliminary_score < 0.50:
+            preliminary_score = 0.50
+            reasons.append("Dormant trusted device: Minimum MFA challenge threshold applied")
 
         is_mock = raw_features.get("is_mock_location", False)
         is_physical = raw_features.get("is_physical_device", True)
 
         if is_mock:
-            preliminary_score = max(preliminary_score, 0.92)
-            reasons.append("CRITICAL: GPS mock provider / spoofing active")
+            preliminary_score = max(preliminary_score, 0.95)
+            is_critical_threat = True
+            reasons.append("CRITICAL THREAT: GPS mock provider / location spoofing active")
 
         if not is_physical:
-            preliminary_score = max(preliminary_score, 0.85)
-            reasons.append("SECURITY: Virtual environment / emulator detected")
+            preliminary_score = max(preliminary_score, 0.90)
+            is_critical_threat = True
+            reasons.append("CRITICAL THREAT: Virtual environment / emulator detected")
 
         final_uts = round(min(max(preliminary_score, 0.0), 1.0), 2)
 
-        step_up_required = final_uts >= 0.55
+        if is_critical_threat or final_uts >= 0.85:
+            risk_action = "DENY"
+        elif final_uts >= 0.50:
+            risk_action = "CHALLENGE"
+        else:
+            risk_action = "ALLOW"
+
         anomaly_detected = final_uts >= 0.80
 
         if not reasons:
@@ -234,9 +257,26 @@ class AdaptiveRiskEngine:
             "base_ml_risk":round(base_ml_risk, 2),
             "device_adjustment": device_adjustment,
             "anomaly_detected": anomaly_detected,
-            "step_up_required": step_up_required,
+            "risk_action": risk_action,
+            "step_up_required": risk_action == "CHALLENGE",
+            "access_denied": risk_action == "DENY",
             "reasons": reasons,
         }
+
+    async def evaluate_risk_and_revoke(
+            self, raw_features: dict, ip_address: Optional[str] = None,
+            device_profile: Optional[Any] = None, *, current_jti: str | None = None,
+            user_id: str | None = None, expires_at: datetime | None = None,
+        ) -> dict:
+        assessment = self.evaluate_risk(
+            raw_features=raw_features, ip_address=ip_address,
+            device_profile=device_profile,
+        )
+        if (assessment.get("access_denied", False) and current_jti and user_id
+                and expires_at is not None):
+            await blacklist_token(current_jti, user_id, expires_at,
+                                  revoke_refresh=True)
+        return assessment
 
 
 risk_engine = AdaptiveRiskEngine()

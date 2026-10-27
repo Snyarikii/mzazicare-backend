@@ -3,10 +3,12 @@ import logging
 import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
 
 import jwt
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from fastapi.concurrency import run_in_threadpool
+from fastapi.responses import JSONResponse
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token as google_id_token
 from sqlalchemy import case, select
@@ -23,6 +25,7 @@ from app.schemas.auth import (AuthTokenResponse, BiometricUnlockRequest,
                               VerifyMfaRequest)
 from app.services.email import mfa_email_configured, send_mfa_email
 from app.services.risk_engine import risk_engine
+from app.services.token_blacklist import blacklist_token
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 logger = logging.getLogger("uvicorn.error")
@@ -43,8 +46,9 @@ def _log_risk_assessment(method: str, user_id: uuid.UUID, assessment: dict,
         f"  • Device adjustment   : {adjustment:+.2f}" if adjustment is not None
         else "  • Device adjustment   : n/a",
         f"  • Unified Trust Score : {assessment['uts_score']:.2f}",
+        f"  • Risk action         : {assessment.get('risk_action', 'UNSPECIFIED')}",
         "  • Step-up MFA         : " + (
-            "Required (UTS ≥ 0.55)" if assessment["step_up_required"] else "No"
+            "Required (CHALLENGE)" if assessment["step_up_required"] else "No"
         ),
         "  • Anomaly detected    : " + (
             "Yes" if assessment["anomaly_detected"] else "No"
@@ -65,9 +69,14 @@ def _utc_now_naive():
 
 
 def _response(user: User, fingerprint: str, score: float, *, step_up=False,
-              anomaly=False, profile: UserDeviceProfile | None = None) -> AuthTokenResponse:
+              anomaly=False, profile: UserDeviceProfile | None = None,
+              auth_status: str = "LOGGED_IN") -> AuthTokenResponse:
     return AuthTokenResponse(
-        access_token="" if step_up else create_access_token(str(user.user_id)),
+        status=auth_status,
+        access_token="" if step_up else create_access_token(
+            str(user.user_id), jti=profile.access_jti,
+            expires_at=profile.access_expires_at,
+        ),
         refresh_token=None if step_up else create_refresh_token(
             str(user.user_id), fingerprint, profile.refresh_jti
         ),
@@ -85,6 +94,24 @@ async def _device(db: AsyncSession, user: User, fingerprint: str):
         UserDeviceProfile.device_fingerprint == fingerprint,
     ))
     return result.scalar_one_or_none()
+
+
+def _risk_simulation_inputs(request: Request, profile: UserDeviceProfile | None,
+                            client_ip: str | None):
+    sim_ip = request.headers.get("x-simulate-ip-address") or request.headers.get("x-forwarded-for")
+    sim_device_state = request.headers.get("x-simulate-device-state")
+    risk_profile = profile
+    if sim_device_state == "NEW":
+        risk_profile = None
+    elif sim_device_state == "DORMANT":
+        risk_profile = SimpleNamespace(
+            trust_state="TRUSTED",
+            last_login_at=_utc_now_naive() - timedelta(days=45),
+        )
+    if sim_ip or sim_device_state:
+        logger.info("Risk simulation headers received: device_state=%s, ip_override=%s",
+                    sim_device_state or "NORMAL", bool(sim_ip))
+    return sim_ip or client_ip, risk_profile
 
 
 def _audit(db: AsyncSession, user: User, fingerprint: str, ip: str | None,
@@ -118,7 +145,20 @@ def _enroll_or_update(db: AsyncSession, user: User, fingerprint: str,
         if profile.trust_state == "PROBATIONARY" and profile.successful_login_count >= 3:
             profile.trust_state = "TRUSTED"
     profile.refresh_jti = secrets.token_urlsafe(24)
+    profile.access_jti = str(uuid.uuid4())
+    profile.access_expires_at = datetime.now(timezone.utc) + timedelta(
+        minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
+    )
     return profile
+
+
+async def _replace_device_session(db: AsyncSession, user: User, fingerprint: str,
+                                  profile: UserDeviceProfile | None, raw: dict,
+                                  *, mfa=False):
+    if profile is not None and profile.access_jti and profile.access_expires_at:
+        await blacklist_token(profile.access_jti, str(user.user_id),
+                              profile.access_expires_at, db=db)
+    return _enroll_or_update(db, user, fingerprint, profile, raw, mfa=mfa)
 
 
 def _challenge(user: User, fingerprint: str, raw: dict,
@@ -179,7 +219,7 @@ async def create_google_account(
     db.add(user)
     try:
         await db.flush()
-        profile = _enroll_or_update(db, user, fingerprint, None, raw or {})
+        profile = await _replace_device_session(db, user, fingerprint, None, raw or {})
         _audit(db, user, fingerprint, ip_address, geolocation, 0.10, True)
         await db.commit()
     except IntegrityError as exc:
@@ -190,7 +230,7 @@ async def create_google_account(
 
 @router.post("/google", response_model=AuthTokenResponse | NeedsRegistrationResponse)
 async def google_auth(payload: GoogleAuthRequest, background_tasks: BackgroundTasks,
-                      db: AsyncSession = Depends(get_db)):
+                      request: Request, db: AsyncSession = Depends(get_db)):
     email, name, sub = await verify_google_id_token(payload.id_token)
 
     user = await find_google_account(db, email, sub)
@@ -214,11 +254,28 @@ async def google_auth(payload: GoogleAuthRequest, background_tasks: BackgroundTa
     profile = await _device(db, user, payload.device_fingerprint)
     if profile is not None and profile.trust_state == "REVOKED":
         raise HTTPException(status_code=403, detail="Device access has been revoked.")
-    assessment = risk_engine.evaluate_risk(raw_features=raw,
-                                           ip_address=payload.ip_address,
-                                           device_profile=profile)
+    risk_ip, risk_profile = _risk_simulation_inputs(request, profile, payload.ip_address)
+    assessment = await risk_engine.evaluate_risk_and_revoke(
+        raw_features=raw, ip_address=risk_ip, device_profile=risk_profile,
+        current_jti=profile.access_jti if profile else None,
+        user_id=str(user.user_id),
+        expires_at=profile.access_expires_at if profile else None,
+    )
     _log_risk_assessment("Google sign-in", user.user_id, assessment)
     score = assessment["uts_score"]
+    if assessment.get("access_denied", False):
+        if profile is not None:
+            profile.refresh_jti = None
+            profile.access_jti = None
+            profile.access_expires_at = None
+        _audit(db, user, payload.device_fingerprint, payload.ip_address,
+               payload.geolocation, score, False)
+        await db.commit()
+        return JSONResponse(status_code=403, content={
+            "status": "ACCESS_DENIED",
+            "access_denied": True,
+            "detail": {"message": "Sign-in denied by risk assessment."},
+        })
     if assessment["step_up_required"]:
         if profile is not None:
             profile.refresh_jti = None
@@ -227,13 +284,14 @@ async def google_auth(payload: GoogleAuthRequest, background_tasks: BackgroundTa
                payload.geolocation, score, False)
         await db.commit()
         return _response(user, payload.device_fingerprint, score, step_up=True,
-                         anomaly=assessment["anomaly_detected"])
+                         anomaly=assessment["anomaly_detected"], auth_status="MFA_REQUIRED")
 
-    profile = _enroll_or_update(db, user, payload.device_fingerprint, profile, raw)
+    profile = await _replace_device_session(db, user, payload.device_fingerprint, profile, raw)
     _audit(db, user, payload.device_fingerprint, payload.ip_address,
            payload.geolocation, score, True)
     await db.commit()
-    return _response(user, payload.device_fingerprint, score, profile=profile)
+    return _response(user, payload.device_fingerprint, score, profile=profile,
+                     auth_status="SUCCESS")
 
 
 @router.post("/register-family", response_model=AuthTokenResponse)
@@ -252,7 +310,7 @@ async def register_family(payload: GoogleAuthRequest, db: AsyncSession = Depends
 @router.post("/biometric-unlock", response_model=AuthTokenResponse)
 async def biometric_unlock(payload: BiometricUnlockRequest,
                            background_tasks: BackgroundTasks,
-                           db: AsyncSession = Depends(get_db)):
+                           request: Request, db: AsyncSession = Depends(get_db)):
     try:
         claims = jwt.decode(payload.refresh_token, settings.SECRET_KEY,
                             algorithms=[settings.ALGORITHM])
@@ -269,19 +327,31 @@ async def biometric_unlock(payload: BiometricUnlockRequest,
             or not profile.refresh_jti
             or not secrets.compare_digest(profile.refresh_jti, claims.get("jti", ""))):
         raise HTTPException(status_code=401, detail="Device is not enrolled.")
-    assessment = risk_engine.evaluate_risk(raw_features=payload.raw_features,
-                                           ip_address=payload.ip_address,
-                                           device_profile=profile)
+    risk_ip, risk_profile = _risk_simulation_inputs(request, profile, payload.ip_address)
+    assessment = await risk_engine.evaluate_risk_and_revoke(
+        raw_features=payload.raw_features, ip_address=risk_ip,
+        device_profile=risk_profile, current_jti=profile.access_jti,
+        user_id=str(user.user_id), expires_at=profile.access_expires_at,
+    )
     _log_risk_assessment("Biometric unlock", user.user_id, assessment)
     score = assessment["uts_score"]
+    if assessment.get("access_denied", False):
+        profile.refresh_jti = None
+        profile.access_jti = None
+        profile.access_expires_at = None
+        _audit(db, user, payload.device_fingerprint, payload.ip_address,
+               None, score, False)
+        await db.commit()
+        raise HTTPException(status_code=403, detail="Sign-in denied by risk assessment.")
     if assessment["step_up_required"]:
         profile.refresh_jti = None
         _challenge(user, payload.device_fingerprint, payload.raw_features, background_tasks)
         _audit(db, user, payload.device_fingerprint, payload.ip_address, None, score, False)
         await db.commit()
         return _response(user, payload.device_fingerprint, score, step_up=True,
-                         anomaly=assessment["anomaly_detected"])
-    profile = _enroll_or_update(db, user, payload.device_fingerprint, profile, payload.raw_features)
+                         anomaly=assessment["anomaly_detected"], auth_status="MFA_REQUIRED")
+    profile = await _replace_device_session(db, user, payload.device_fingerprint,
+                                            profile, payload.raw_features)
     _audit(db, user, payload.device_fingerprint, payload.ip_address, None, score, True)
     await db.commit()
     return _response(user, payload.device_fingerprint, score, profile=profile)
@@ -306,8 +376,10 @@ async def verify_mfa_challenge(payload: VerifyMfaRequest,
     user.mfa_expires_at = None
     user.mfa_device_fingerprint = None
     profile = await _device(db, user, payload.device_fingerprint)
-    profile = _enroll_or_update(db, user, payload.device_fingerprint, profile,
-                                {"device_model": payload.device_model, "os_name": payload.os_name}, mfa=True)
+    profile = await _replace_device_session(
+        db, user, payload.device_fingerprint, profile,
+        {"device_model": payload.device_model, "os_name": payload.os_name}, mfa=True,
+    )
     _audit(db, user, payload.device_fingerprint, None, None, 0.10, True)
     await db.commit()
     return _response(user, payload.device_fingerprint, 0.10, profile=profile)
@@ -344,6 +416,11 @@ async def logout(payload: LogoutRequest, db: AsyncSession = Depends(get_db)):
     if profile and profile.refresh_jti and secrets.compare_digest(
         profile.refresh_jti, claims.get("jti", "")
     ):
+        if profile.access_jti and profile.access_expires_at:
+            await blacklist_token(profile.access_jti, str(user_id),
+                                  profile.access_expires_at, db=db)
         profile.refresh_jti = None
+        profile.access_jti = None
+        profile.access_expires_at = None
         await db.commit()
     return {"message": "Session ended."}
