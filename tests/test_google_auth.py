@@ -59,6 +59,46 @@ def http_request(headers=None):
 
 
 class GoogleAuthTests(unittest.IsolatedAsyncioTestCase):
+    async def test_first_login_bounds_device_metadata_from_android_build(self):
+        user = existing_user()
+        db = FakeDb()
+        raw = {
+            "device_brand": "samsung",
+            "device_model": "SM-A145F",
+            "os_name": "samsung/a14nnxx/a14:15/AP3A.240905.015.A2/A145FXXUDDZB5:user/release-keys",
+            "os_version": "15",
+        }
+
+        profile = auth._enroll_or_update(db, user, "device-1", None, raw)
+
+        self.assertEqual(profile.os_name, "Android 15")
+        self.assertLessEqual(len(profile.os_name), 32)
+        self.assertLessEqual(len(profile.device_model), 64)
+
+    async def test_first_admin_google_login_creates_admin_with_long_android_os_name(self):
+        db = FakeDb(None)
+        payload = GoogleAuthRequest(
+            id_token="id", device_fingerprint="device-1",
+            raw_features={
+                "device_brand": "samsung", "device_model": "SM-A145F",
+                "os_name": "samsung/a14nnxx/a14:15/AP3A.240905.015.A2/A145FXXUDDZB5:user/release-keys",
+                "os_version": "15",
+            },
+        )
+        with patch.object(auth.settings, "GOOGLE_CLIENT_IDS", "client-id"), \
+             patch.object(auth.settings, "ADMIN_EMAIL", "admin@example.com"), \
+             patch.object(auth, "run_in_threadpool", new=AsyncMock(return_value={
+                 "aud": "client-id", "email_verified": True,
+                 "email": "Admin@Example.com", "name": "Admin", "sub": "google-admin-sub",
+             })):
+            response = await auth.google_auth(payload, BackgroundTasks(), http_request(), db)
+
+        self.assertEqual(response.role, "ADMIN")
+        self.assertEqual(response.user.role, "ADMIN")
+        self.assertEqual(db.commits, 1)
+        profile = next(item for item in db.added if isinstance(item, UserDeviceProfile))
+        self.assertEqual(profile.os_name, "Android 15")
+
     async def test_registration_requires_role(self):
         db = FakeDb(None)
         payload = GoogleAuthRequest(id_token="id", device_fingerprint="device-1")

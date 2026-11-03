@@ -5,6 +5,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+from app.db.encrypted_type import EncryptedJSON, EncryptedString
 
 
 class User(Base):
@@ -40,6 +41,10 @@ class User(Base):
     mfa_code = Column(String(6), nullable=True)
     mfa_expires_at = Column(DateTime, nullable=True)
     mfa_device_fingerprint = Column(String(128), nullable=True)
+
+    @property
+    def is_active(self) -> bool:
+        return self.status == "ACTIVE"
 
     # Relationships
     contextual_logins = relationship("ContextualLogin", back_populates="user", cascade="all, delete-orphan")
@@ -93,7 +98,7 @@ class CareLog(Base):
         UUID(as_uuid=True), ForeignKey("users.user_id", ondelete="CASCADE"), nullable=False
     )
     patient_id: Mapped[str] = mapped_column(String(50), nullable=False)
-    care_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    care_notes: Mapped[str | None] = mapped_column(EncryptedString(), nullable=True)
     task_status: Mapped[str] = mapped_column(String(30), nullable=False)
     category: Mapped[str] = mapped_column(String(30), default="NOTE", server_default="NOTE", nullable=False)
     recorded_at: Mapped[datetime] = mapped_column(
@@ -214,6 +219,12 @@ class UserDeviceProfile(Base):
     # Hardware metadata for security audits & UI display
     device_model = Column(String(64), nullable=True)
     os_name = Column(String(32), nullable=True)
+    device_name = Column(String(64), nullable=True)        # e.g. "Samsung Galaxy A14"
+    model_identifier = Column(String(64), nullable=True)   # e.g. "SM-A145F"
+
+    # Session presence for the "Active Devices & Sessions" view
+    last_ip_address = Column(String(45), nullable=True)
+    last_seen_at = Column(DateTime(timezone=True), nullable=True)
 
     # Verification Timestamps
     first_seen_at = Column(DateTime, default=datetime.utcnow, nullable=False)
@@ -268,10 +279,10 @@ class ElderlyProfile(Base):
     age: Mapped[int] = mapped_column(Integer, nullable=False)
     gender: Mapped[str | None] = mapped_column(String(20), nullable=True)
     care_tier: Mapped[str] = mapped_column(String(50), default="Daily Assistance", nullable=False)
-    chronic_conditions: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    chronic_conditions: Mapped[list[str]] = mapped_column(EncryptedJSON(), default=list, nullable=False)
     emergency_contact_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    emergency_contact_phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    residence_address: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    emergency_contact_phone: Mapped[str | None] = mapped_column(EncryptedString(), nullable=True)
+    residence_address: Mapped[str | None] = mapped_column(EncryptedString(), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=datetime.utcnow, nullable=False
     )
@@ -293,8 +304,8 @@ class CareSession(Base):
     scheduled_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     end_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     service_tier: Mapped[str] = mapped_column(String(50), nullable=False)
-    special_instructions: Mapped[str | None] = mapped_column(Text, nullable=True)
+    special_instructions: Mapped[str | None] = mapped_column(EncryptedString(), nullable=True)
     status: Mapped[str] = mapped_column(String(30), default="REQUESTED", nullable=False, index=True)
-    vitals_recorded: Mapped[dict | None] = mapped_column(JSON, nullable=True)
-    encounter_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    vitals_recorded: Mapped[dict | None] = mapped_column(EncryptedJSON(), nullable=True)
+    encounter_notes: Mapped[str | None] = mapped_column(EncryptedString(), nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

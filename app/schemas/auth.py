@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import AliasChoices, BaseModel, EmailStr, Field
 from typing import Optional, Dict, Any, Literal
 
 class UserResponse(BaseModel):
@@ -43,6 +43,9 @@ class VerifyMfaRequest(BaseModel):
     otp_code: str
     device_fingerprint: str
     device_model: Optional[str] = None
+    device_brand: Optional[str] = None
+    device_name: Optional[str] = None
+    model_id: Optional[str] = None
     os_name: Optional[str] = None
 
 class ResendMfaRequest(BaseModel):
@@ -67,3 +70,23 @@ class BiometricUnlockRequest(BaseModel):
 
 class LogoutRequest(BaseModel):
     refresh_token: str
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str = Field(
+        min_length=1, validation_alias=AliasChoices("refreshToken", "refresh_token")
+    )
+
+
+class DeviceSessionResponse(BaseModel):
+    id: int
+    device_name: str
+    model: Optional[str] = None
+    ip_address: Optional[str] = None
+    last_seen: Optional[datetime] = None
+    is_current: bool = False
+
+
+class RevokeSessionsResponse(BaseModel):
+    revoked_count: int
+    message: str

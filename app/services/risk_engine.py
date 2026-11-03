@@ -1,6 +1,7 @@
 import os
 import math
 import ipaddress
+from itertools import combinations
 import joblib
 import pandas as pd
 import numpy as np
@@ -85,6 +86,39 @@ class AdaptiveRiskEngine:
             analysis["risk_modifier"] = 0.40
         analysis["is_critical_threat"] = flagged
         return analysis
+
+    def _model_shap_attributions(self, input_data: pd.DataFrame) -> list[dict]:
+        """Exact interventional Shapley values for the five model inputs.
+
+        The fixed reference describes a routine Nairobi daytime Wi-Fi session.
+        Values explain the model probability, before policy adjustments.
+        """
+        if self.model is None:
+            return []
+        columns = list(input_data.columns)
+        reference = {"device_type": "mobile", "os_family": "Android",
+                     "hour_sin": 0.0, "hour_cos": -1.0, "rtt_ms": 45.0}
+        masks = range(1 << len(columns))
+        batch = pd.DataFrame([
+            {name: input_data.iloc[0][name] if mask & (1 << index) else reference[name]
+             for index, name in enumerate(columns)} for mask in masks
+        ], columns=columns)
+        probabilities = self.model.predict_proba(batch)[:, 1]
+        factorial = math.factorial
+        count = len(columns)
+        values = []
+        for index, name in enumerate(columns):
+            contribution = 0.0
+            other_indices = [position for position in range(count) if position != index]
+            for subset_size in range(count):
+                weight = factorial(subset_size) * factorial(count - subset_size - 1) / factorial(count)
+                for subset in combinations(other_indices, subset_size):
+                    mask = sum(1 << position for position in subset)
+                    contribution += weight * (probabilities[mask | (1 << index)] - probabilities[mask])
+            values.append({"feature": name.replace("_", " ").title(),
+                           "impact": round(float(contribution), 4),
+                           "positive": bool(contribution > 0)})
+        return values
 
     def evaluate_risk(
             self,
@@ -173,10 +207,15 @@ class AdaptiveRiskEngine:
         print(f"  • spatial distance   : {dist_km:.2f} km from hospital", flush=True)
         print("-" * 62, flush=True)
 
+        shap_attributions = []
         if self.model:
             try:
                 probabilities = self.model.predict_proba(input_data)[0]
                 base_ml_risk = float(probabilities[1])
+                try:
+                    shap_attributions = self._model_shap_attributions(input_data)
+                except Exception as exc:
+                    print(f"[Risk Engine] Attribution unavailable: {exc}")
                 print("\n" + "🔍 " * 8 + " MODEL DIAGNOSTICS " + "🔍 " * 8, flush=True)
                 print(f"Model Classes: {getattr(self.model, 'classes_', 'N/A')}", flush=True)
                 print(f"Raw Probabilities Array: {probabilities}", flush=True)
@@ -261,6 +300,7 @@ class AdaptiveRiskEngine:
             "step_up_required": risk_action == "CHALLENGE",
             "access_denied": risk_action == "DENY",
             "reasons": reasons,
+            "shap_attributions": shap_attributions,
         }
 
     async def evaluate_risk_and_revoke(

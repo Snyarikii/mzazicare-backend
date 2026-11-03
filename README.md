@@ -19,7 +19,10 @@ Create a `.env` file in the repository root with your own connection details and
 ```dotenv
 DATABASE_URL=postgresql+asyncpg://USER:PASSWORD@localhost:5432/mzazicare_db
 SECRET_KEY=replace-with-a-long-random-secret
+PHI_ENCRYPTION_KEY=replace-with-a-persistent-fernet-key
 ```
+
+Generate a dedicated Fernet key with `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` and store it securely. Use the same key for every API and migration process. For local development only, an unset `PHI_ENCRYPTION_KEY` is deterministically derived from `SECRET_KEY` and logs a warning; changing either key after data is encrypted requires re-encrypting the stored values first. Keep the key in a secret manager for production and out of source control.
 
 The database must exist before initializing tables. For a fresh local database, run:
 
@@ -39,6 +42,18 @@ Apply [the schedule and care logs migration](migrations/20261023_schedule_care_l
 Completing a visit now also creates a `VISIT_COMPLETION` care log. Previously completed visits remain in `care_sessions`; the migration does not duplicate those historical records.
 
 Apply [the token blacklist migration](migrations/20261027_token_blacklist.sql) to existing databases before starting this version of the API. New databases initialized with `create_tables.py` include the table and device-session columns automatically. New access tokens carry a UUID4 `jti` and expiration; protected routes reject revoked tokens. Logout revokes the access token paired with the submitted device refresh token. Behavioral and risk `DENY` decisions revoke both the affected access token and its device refresh token before returning, and a new login rotates the device's previous access token. Access tokens issued before this migration have no `jti` and must sign in again.
+
+## PHI encryption migration
+
+The ORM encrypts elderly profile `chronic_conditions`, `emergency_contact_phone`, and `residence_address`; care session `special_instructions`, `vitals_recorded`, and `encounter_notes`; and care log `care_notes`. The JSON fields continue to appear as lists or dictionaries in API responses. Medication entries are stored in `care_logs.care_notes`; there is no separate medications column.
+
+For an existing database, apply the earlier SQL migrations, configure a persistent `PHI_ENCRYPTION_KEY`, back up the database, and run:
+
+```powershell
+python -m alembic upgrade head
+```
+
+This Alembic revision starts from the existing schema established by `create_tables.py` and the earlier SQL migrations. It changes affected columns to PostgreSQL `TEXT` and encrypts existing rows in the same transaction. On a fresh database, run `create_tables.py` first, then `alembic upgrade head` to record the revision. Until the migration runs, reads tolerate legacy plaintext; after it runs, raw PostgreSQL rows contain Fernet tokens while authenticated API responses contain decrypted values. Malformed Fernet tokens raise an error rather than leaking ciphertext. Do not change the encryption key without a planned key rotation.
 
 ## Run the API
 
@@ -73,7 +88,8 @@ For a new Google account, `/api/v1/auth/google` returns `NEEDS_REGISTRATION` wit
 ## Tests
 
 ```powershell
-python -m unittest discover -p "test_*.py"
+python -X utf8 -m unittest discover -s tests -p "test_*.py"
 ```
 
 The tests cover caregiver access and behavioral evaluation without requiring a running API server.
+The encryption tests also verify raw ciphertext and decrypted model responses. To test the Alembic upgrade and downgrade against temporary tables in a configured PostgreSQL database, set `PHI_MIGRATION_TEST=1` before running the test suite.

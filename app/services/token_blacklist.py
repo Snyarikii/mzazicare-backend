@@ -49,6 +49,25 @@ async def blacklist_token(jti: str, user_id: str, expires_at: datetime,
         await session.commit()
 
 
+async def blacklist_refresh_jti(jti: str, user_id: str, expires_at: datetime,
+                                db: AsyncSession) -> bool:
+    """Record a refresh-token nonce as revoked inside the caller's transaction.
+
+    Refresh nonces are opaque url-safe strings rather than UUIDs, so they skip the
+    UUID normalisation applied to access-token IDs. Returns False when the nonce
+    cannot fit the blacklist key; callers still clear the device's refresh_jti,
+    which is what /auth/refresh validates against.
+    """
+    if not jti or len(jti) > TokenBlacklist.__table__.c.jti.type.length:
+        return False
+    statement = insert(TokenBlacklist).values(
+        jti=jti, user_id=uuid.UUID(str(user_id)),
+        revoked_at=datetime.now(timezone.utc), expires_at=_utc(expires_at),
+    ).on_conflict_do_nothing(index_elements=[TokenBlacklist.jti])
+    await db.execute(statement)
+    return True
+
+
 async def is_token_blacklisted(jti: str, db: AsyncSession | None = None) -> bool:
     """Check unexpired revocations; JWT expiration is verified separately."""
     statement = select(TokenBlacklist.jti).where(
