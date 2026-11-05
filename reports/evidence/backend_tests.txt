@@ -1,0 +1,353 @@
+﻿python : 
+C:\mzazicare-backend\venv\Lib\site-packages\fastapi\testclient.py:1: 
+StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is 
+deprecated; install `httpx2` instead.
+At C:\mzazicare-backend\scripts\collect_evidence.ps1:24 char:5
++     python -X utf8 -m unittest discover -s tests -p "test_*.py" -v
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (C:\mzazicare-ba...ttpx2` ins 
+   tead.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  from starlette.testclient import TestClient as TestClient  # noqa
+test_missing_account_instructs_google_login (test_admin_promotion.AdminPro
+motionTests.test_missing_account_instructs_google_login) ... ok
+test_promotes_existing_account_and_commits (test_admin_promotion.AdminProm
+otionTests.test_promotes_existing_account_and_commits) ... ok
+test_category_and_blank_notes_are_invalid (test_caregiver_activity.Caregiv
+erActivityTests.test_category_and_blank_notes_are_invalid) ... ok
+test_completed_visit_creates_care_log (test_caregiver_activity.CaregiverAc
+tivityTests.test_completed_visit_creates_care_log) ... ok
+test_create_rejects_unassigned_patient (test_caregiver_activity.CaregiverA
+ctivityTests.test_create_rejects_unassigned_patient) ... ok
+test_create_writes_valid_log_for_assigned_patient (test_caregiver_activity
+.CaregiverActivityTests.test_create_writes_valid_log_for_assigned_patient)
+ ... ok
+test_logs_are_scoped_to_caregiver_and_patient (test_caregiver_activity.Car
+egiverActivityTests.test_logs_are_scoped_to_caregiver_and_patient) ... ok
+test_schedule_is_scoped_to_caregiver_and_selected_day (test_caregiver_acti
+vity.CaregiverActivityTests.test_schedule_is_scoped_to_caregiver_and_selec
+ted_day) ... ok
+test_access_requires_caregiver_and_approval (test_caregiver_verification.C
+aregiverVerificationTests.test_access_requires_caregiver_and_approval) 
+... ok
+test_invalid_or_inactive_license_is_rejected (test_caregiver_verification.
+CaregiverVerificationTests.test_invalid_or_inactive_license_is_rejected) 
+... ok
+test_matching_name_approves_caregiver (test_caregiver_verification.Caregiv
+erVerificationTests.test_matching_name_approves_caregiver) ... ok
+test_new_registration_creates_user_only_after_name_match (test_caregiver_v
+erification.CaregiverVerificationTests.test_new_registration_creates_user_
+only_after_name_match) ... ok
+test_new_registration_name_mismatch_does_not_write_user (test_caregiver_ve
+rification.CaregiverVerificationTests.test_new_registration_name_mismatch_
+does_not_write_user) ... ok
+test_new_registration_rejects_invalid_license_without_writing (test_caregi
+ver_verification.CaregiverVerificationTests.test_new_registration_rejects_
+invalid_license_without_writing) ... ok
+test_registry_name_mismatch_is_rejected (test_caregiver_verification.Careg
+iverVerificationTests.test_registry_name_mismatch_is_rejected) ... ok
+test_sql_echo_is_off_outside_development 
+(test_db_logging.SqlEchoTests.test_sql_echo_is_off_outside_development) 
+... ok
+test_sql_echo_is_on_in_development 
+(test_db_logging.SqlEchoTests.test_sql_echo_is_on_in_development) ... ok
+test_lists_current_device_first_and_refreshes_its_presence (test_device_se
+ssions.DeviceSessionTests.test_lists_current_device_first_and_refreshes_it
+s_presence) ... C:\mzazicare-backend\tests\test_device_sessions.py:71: 
+DeprecationWarning: datetime.datetime.utcnow() is deprecated and 
+scheduled for removal in a future version. Use timezone-aware objects to 
+represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  last_login_at=datetime.utcnow(),
+ok
+test_login_records_device_labels_and_observed_ip (test_device_sessions.Dev
+iceSessionTests.test_login_records_device_labels_and_observed_ip) ... ok
+test_refresh_blacklist_entry_uses_opaque_nonce (test_device_sessions.Devic
+eSessionTests.test_refresh_blacklist_entry_uses_opaque_nonce) ... ok
+test_refuses_when_current_session_is_unknown (test_device_sessions.DeviceS
+essionTests.test_refuses_when_current_session_is_unknown) ... ok
+test_revokes_every_other_session_and_audits (test_device_sessions.DeviceSe
+ssionTests.test_revokes_every_other_session_and_audits) ... ok
+test_biometric_replay_is_rejected 
+(test_google_auth.GoogleAuthTests.test_biometric_replay_is_rejected) ... 
+ok
+test_biometric_unlock_logs_risk_and_reasons (test_google_auth.GoogleAuthTe
+sts.test_biometric_unlock_logs_risk_and_reasons) ... ok
+test_denied_biometric_unlock_revokes_refresh (test_google_auth.GoogleAuthT
+ests.test_denied_biometric_unlock_revokes_refresh) ... ok
+test_denied_google_login_issues_no_tokens_or_challenge (test_google_auth.G
+oogleAuthTests.test_denied_google_login_issues_no_tokens_or_challenge) 
+... ok
+­ƒºá [Risk Engine] Loaded trained RBA model from: C:\mzazicare-backend\app\services\..\ml\adaptive_risk_model.joblib
+
+­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼  EXACT MODEL INPUT VECTOR ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼ 
+  ÔÇó raw local_hour     : 10 (derived: sin=0.5000, cos=-0.8660)
+  ÔÇó os_family          : iOS (from raw: 'iOS')
+  ÔÇó device_type        : mobile
+  ÔÇó network / rtt_ms   : 45.0ms (from network: 'WIFI')
+  ÔÇó spatial distance   : 0.00 km from hospital
+--------------------------------------------------------------
+
+­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì  MODEL DIAGNOSTICS ­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì 
+Model Classes: [0 1]
+Raw Probabilities Array: [0.82024725 0.17975275]
+============================================================
+
+test_dormant_header_challenges_without_mutating_saved_profile (test_google
+_auth.GoogleAuthTests.test_dormant_header_challenges_without_mutating_save
+d_profile) ... C:\mzazicare-backend\app\services\risk_engine.py:252: 
+DeprecationWarning: datetime.datetime.utcnow() is deprecated and 
+scheduled for removal in a future version. Use timezone-aware objects to 
+represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  days_inactive = (datetime.utcnow() - device_profile.last_login_at).days 
+if device_profile.last_login_at else 0
+Executing <Task finished name='Task-111' coro=<GoogleAuthTests.test_dorman
+t_header_challenges_without_mutating_saved_profile() done, defined at 
+C:\mzazicare-backend\tests\test_google_auth.py:303> result=None created 
+at C:\Users\nyari\AppData\Local\Programs\Python\Python313\Lib\asyncio\runn
+ers.py:100> took 0.222 seconds
+ok
+
+­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼  EXACT MODEL INPUT VECTOR ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼ 
+  ÔÇó raw local_hour     : 10 (derived: sin=0.5000, cos=-0.8660)
+  ÔÇó os_family          : iOS (from raw: 'iOS')
+  ÔÇó device_type        : mobile
+  ÔÇó network / rtt_ms   : 45.0ms (from network: 'WIFI')
+  ÔÇó spatial distance   : 0.00 km from hospital
+--------------------------------------------------------------
+
+­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì  MODEL DIAGNOSTICS ­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì 
+Model Classes: [0 1]
+Raw Probabilities Array: [0.82024725 0.17975275]
+============================================================
+
+test_dormant_header_on_biometric_unlock_requires_mfa (test_google_auth.Goo
+gleAuthTests.test_dormant_header_on_biometric_unlock_requires_mfa) ... 
+C:\mzazicare-backend\app\services\risk_engine.py:252: DeprecationWarning: 
+datetime.datetime.utcnow() is deprecated and scheduled for removal in a 
+future version. Use timezone-aware objects to represent datetimes in UTC: 
+datetime.datetime.now(datetime.UTC).
+  days_inactive = (datetime.utcnow() - device_profile.last_login_at).days 
+if device_profile.last_login_at else 0
+Executing <Task finished name='Task-116' coro=<GoogleAuthTests.test_dorman
+t_header_on_biometric_unlock_requires_mfa() done, defined at 
+C:\mzazicare-backend\tests\test_google_auth.py:390> result=None created 
+at C:\Users\nyari\AppData\Local\Programs\Python\Python313\Lib\asyncio\runn
+ers.py:100> took 0.144 seconds
+ok
+test_family_completion_creates_device_bound_session (test_google_auth.Goog
+leAuthTests.test_family_completion_creates_device_bound_session) ... ok
+test_first_admin_google_login_creates_admin_with_long_android_os_name (tes
+t_google_auth.GoogleAuthTests.test_first_admin_google_login_creates_admin_
+with_long_android_os_name) ... ok
+test_first_login_bounds_device_metadata_from_android_build (test_google_au
+th.GoogleAuthTests.test_first_login_bounds_device_metadata_from_android_bu
+ild) ... ok
+test_high_risk_google_login_dispatches_email_without_token (test_google_au
+th.GoogleAuthTests.test_high_risk_google_login_dispatches_email_without_to
+ken) ... ok
+test_low_risk_login_promotes_device_and_rotates_refresh (test_google_auth.
+GoogleAuthTests.test_low_risk_login_promotes_device_and_rotates_refresh) 
+... ok
+test_mfa_completes_and_rotates_refresh 
+(test_google_auth.GoogleAuthTests.test_mfa_completes_and_rotates_refresh) 
+... ok
+test_new_device_header_and_forwarded_ip_reach_risk_engine (test_google_aut
+h.GoogleAuthTests.test_new_device_header_and_forwarded_ip_reach_risk_engin
+e) ... ok
+test_new_google_user_with_role_is_not_written_until_completion (test_googl
+e_auth.GoogleAuthTests.test_new_google_user_with_role_is_not_written_until
+_completion) ... ok
+test_registration_rejects_invalid_role 
+(test_google_auth.GoogleAuthTests.test_registration_rejects_invalid_role) 
+... ok
+test_registration_requires_role 
+(test_google_auth.GoogleAuthTests.test_registration_requires_role) ... ok
+
+­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼  EXACT MODEL INPUT VECTOR ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼ 
+  ÔÇó raw local_hour     : 10 (derived: sin=0.5000, cos=-0.8660)
+  ÔÇó os_family          : iOS (from raw: 'iOS')
+  ÔÇó device_type        : mobile
+  ÔÇó network / rtt_ms   : 45.0ms (from network: 'WIFI')
+  ÔÇó spatial distance   : 0.00 km from hospital
+--------------------------------------------------------------
+
+­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì  MODEL DIAGNOSTICS ­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì 
+Model Classes: [0 1]
+Raw Probabilities Array: [0.82024725 0.17975275]
+============================================================
+
+test_simulated_ip_header_denies_without_using_forwarded_fallback (test_goo
+gle_auth.GoogleAuthTests.test_simulated_ip_header_denies_without_using_for
+warded_fallback) ... Executing <Task finished name='Task-171' coro=<Google
+AuthTests.test_simulated_ip_header_denies_without_using_forwarded_fallback
+() done, defined at C:\mzazicare-backend\tests\test_google_auth.py:258> 
+result=None created at C:\Users\nyari\AppData\Local\Programs\Python\Python
+313\Lib\asyncio\runners.py:100> took 0.126 seconds
+ok
+test_verified_caregiver_completion_creates_approved_session (test_google_a
+uth.GoogleAuthTests.test_verified_caregiver_completion_creates_approved_se
+ssion) ... ok
+test_database_stores_tokens_and_models_return_plain_values (test_phi_encry
+ption.PhiEncryptionTests.test_database_stores_tokens_and_models_return_pla
+in_values) ... C:\mzazicare-backend\venv\Lib\site-packages\sqlalchemy\sql\
+schema.py:3627: DeprecationWarning: datetime.datetime.utcnow() is 
+deprecated and scheduled for removal in a future version. Use 
+timezone-aware objects to represent datetimes in UTC: 
+datetime.datetime.now(datetime.UTC).
+  return util.wrap_callable(lambda ctx: fn(), fn)  # type: ignore
+ok
+test_key_fallback_is_stable_and_invalid_explicit_key_fails (test_phi_encry
+ption.PhiEncryptionTests.test_key_fallback_is_stable_and_invalid_explicit_
+key_fails) ... PHI_ENCRYPTION_KEY is unset; deriving it from SECRET_KEY. 
+Set a dedicated persistent Fernet key before production use.
+PHI_ENCRYPTION_KEY is unset; deriving it from SECRET_KEY. Set a dedicated 
+persistent Fernet key before production use.
+ok
+test_legacy_json_rows_are_readable_before_migration (test_phi_encryption.P
+hiEncryptionTests.test_legacy_json_rows_are_readable_before_migration) 
+... ok
+test_plaintext_fallback_does_not_mask_corrupt_tokens (test_phi_encryption.
+PhiEncryptionTests.test_plaintext_fallback_does_not_mask_corrupt_tokens) 
+... ok
+test_upgrade_and_downgrade_existing_plaintext (test_phi_migration_postgres
+.PhiMigrationPostgresTests.test_upgrade_and_downgrade_existing_plaintext) 
+... skipped 'requires opt-in PostgreSQL'
+2026-11-05T04:45:52.758927Z [warning  ] http_request                   client_ip=testclient duration_ms=18.01 method=POST path=/api/v1/auth/google status_code=401 user_id=None
+2026-11-05T04:45:52.766220Z [warning  ] http_request                   client_ip=testclient duration_ms=1.69 method=POST path=/api/v1/auth/google status_code=401 user_id=None
+2026-11-05T04:45:52.771986Z [warning  ] http_request                   client_ip=testclient duration_ms=1.1 method=POST path=/api/v1/auth/google status_code=401 user_id=None
+2026-11-05T04:45:52.778208Z [warning  ] http_request                   client_ip=testclient duration_ms=1.42 method=POST path=/api/v1/auth/google status_code=401 user_id=None
+2026-11-05T04:45:52.784228Z [warning  ] http_request                   client_ip=testclient duration_ms=0.88 method=POST path=/api/v1/auth/google status_code=401 user_id=None
+2026-11-05T04:45:52.791492Z [warning  ] http_request                   client_ip=testclient duration_ms=2.34 method=POST path=/api/v1/auth/google status_code=429 user_id=None
+2026-11-05T04:45:52.799634Z [warning  ] http_request                   client_ip=testclient duration_ms=2.76 method=POST path=/api/v1/auth/google status_code=429 user_id=None
+test_google_sign_in_allows_five_per_minute (test_rate_limits.RateLimitTest
+s.test_google_sign_in_allows_five_per_minute) ... ok
+2026-11-05T04:45:52.807972Z [warning  ] http_request                   client_ip=testclient duration_ms=3.16 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
+2026-11-05T04:45:52.813854Z [warning  ] http_request                   client_ip=testclient duration_ms=0.95 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
+2026-11-05T04:45:52.819039Z [warning  ] http_request                   client_ip=testclient duration_ms=0.85 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
+2026-11-05T04:45:52.826255Z [warning  ] http_request                   client_ip=testclient duration_ms=1.31 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
+2026-11-05T04:45:52.831541Z [warning  ] http_request                   client_ip=testclient duration_ms=0.95 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
+2026-11-05T04:45:52.837600Z [warning  ] http_request                   client_ip=testclient duration_ms=1.3 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
+2026-11-05T04:45:52.843661Z [warning  ] http_request                   client_ip=testclient duration_ms=1.33 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
+2026-11-05T04:45:52.849069Z [warning  ] http_request                   client_ip=testclient duration_ms=0.86 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
+2026-11-05T04:45:52.855290Z [warning  ] http_request                   client_ip=testclient duration_ms=1.32 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
+2026-11-05T04:45:52.860844Z [warning  ] http_request                   client_ip=testclient duration_ms=1.01 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
+2026-11-05T04:45:52.866141Z [warning  ] http_request                   client_ip=testclient duration_ms=0.91 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
+2026-11-05T04:45:52.872434Z [warning  ] http_request                   client_ip=testclient duration_ms=1.43 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
+2026-11-05T04:45:52.878023Z [warning  ] http_request                   client_ip=testclient duration_ms=0.92 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
+2026-11-05T04:45:52.883473Z [warning  ] http_request                   client_ip=testclient duration_ms=0.87 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
+2026-11-05T04:45:52.889830Z [warning  ] http_request                   client_ip=testclient duration_ms=1.42 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
+2026-11-05T04:45:52.895360Z [warning  ] http_request                   client_ip=testclient duration_ms=0.85 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
+2026-11-05T04:45:52.900900Z [warning  ] http_request                   client_ip=testclient duration_ms=1.32 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
+2026-11-05T04:45:52.906743Z [warning  ] http_request                   client_ip=testclient duration_ms=1.4 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
+2026-11-05T04:45:52.912189Z [warning  ] http_request                   client_ip=testclient duration_ms=0.97 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
+2026-11-05T04:45:52.918952Z [warning  ] http_request                   client_ip=testclient duration_ms=1.41 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
+2026-11-05T04:45:52.925581Z [warning  ] http_request                   client_ip=testclient duration_ms=1.99 method=POST path=/api/v1/auth/refresh status_code=429 user_id=None
+test_refresh_allows_twenty_per_minute 
+(test_rate_limits.RateLimitTests.test_refresh_allows_twenty_per_minute) 
+... ok
+2026-11-05T04:45:52.935195Z [warning  ] http_request                   client_ip=testclient duration_ms=4.1 method=POST path=/api/v1/auth/revoke-all-sessions status_code=409 user_id=None
+2026-11-05T04:45:52.943789Z [warning  ] http_request                   client_ip=testclient duration_ms=3.62 method=POST path=/api/v1/auth/revoke-all-sessions status_code=409 user_id=None
+2026-11-05T04:45:52.950943Z [warning  ] http_request                   client_ip=testclient duration_ms=2.42 method=POST path=/api/v1/auth/revoke-all-sessions status_code=409 user_id=None
+2026-11-05T04:45:52.958116Z [warning  ] http_request                   client_ip=testclient duration_ms=2.6 method=POST path=/api/v1/auth/revoke-all-sessions status_code=409 user_id=None
+2026-11-05T04:45:52.965497Z [warning  ] http_request                   client_ip=testclient duration_ms=2.81 method=POST path=/api/v1/auth/revoke-all-sessions status_code=409 user_id=None
+2026-11-05T04:45:52.972321Z [warning  ] http_request                   client_ip=testclient duration_ms=2.32 method=POST path=/api/v1/auth/revoke-all-sessions status_code=409 user_id=None
+2026-11-05T04:45:52.979713Z [warning  ] http_request                   client_ip=testclient duration_ms=2.31 method=POST path=/api/v1/auth/revoke-all-sessions status_code=409 user_id=None
+2026-11-05T04:45:52.986822Z [warning  ] http_request                   client_ip=testclient duration_ms=2.26 method=POST path=/api/v1/auth/revoke-all-sessions status_code=409 user_id=None
+2026-11-05T04:45:52.994790Z [warning  ] http_request                   client_ip=testclient duration_ms=2.83 method=POST path=/api/v1/auth/revoke-all-sessions status_code=409 user_id=None
+2026-11-05T04:45:53.001727Z [warning  ] http_request                   client_ip=testclient duration_ms=2.34 method=POST path=/api/v1/auth/revoke-all-sessions status_code=409 user_id=None
+2026-11-05T04:45:53.011619Z [warning  ] http_request                   client_ip=testclient duration_ms=3.27 method=POST path=/api/v1/auth/revoke-all-sessions status_code=429 user_id=None
+test_revoke_all_sessions_allows_ten_per_minute (test_rate_limits.RateLimit
+Tests.test_revoke_all_sessions_allows_ten_per_minute) ... ok
+test_refresh_rejects_blacklisted_token (test_refresh_auth.RefreshAuthTests
+.test_refresh_rejects_blacklisted_token) ... ok
+test_refresh_rejects_missing_and_suspended_users (test_refresh_auth.Refres
+hAuthTests.test_refresh_rejects_missing_and_suspended_users) ... ok
+test_refresh_rotates_session_and_audits_ip_and_device_headers (test_refres
+h_auth.RefreshAuthTests.test_refresh_rotates_session_and_audits_ip_and_dev
+ice_headers) ... ok
+test_development_writes_key_value_pairs (test_request_logging.LogFormatTes
+ts.test_development_writes_key_value_pairs) ... ok
+test_production_writes_json_with_timestamp_and_level (test_request_logging
+.LogFormatTests.test_production_writes_json_with_timestamp_and_level) ... 
+ok
+test_authenticated_request_records_user_id (test_request_logging.RequestLo
+ggingTests.test_authenticated_request_records_user_id) ... ok
+test_logs_request_fields_without_query_string (test_request_logging.Reques
+tLoggingTests.test_logs_request_fields_without_query_string) ... ok
+test_main_app_registers_middleware_outermost (test_request_logging.Request
+LoggingTests.test_main_app_registers_middleware_outermost) ... ok
+test_rejected_token_logs_warning_without_user_id (test_request_logging.Req
+uestLoggingTests.test_rejected_token_logs_warning_without_user_id) ... ok
+test_unhandled_exception_is_logged_as_500_error (test_request_logging.Requ
+estLoggingTests.test_unhandled_exception_is_logged_as_500_error) ... ok
+test_action_threshold_boundaries (test_risk_engine.RiskEngineDecisionTests
+.test_action_threshold_boundaries) ... ok
+test_all_blacklisted_ips_and_explicit_flag_deny (test_risk_engine.RiskEngi
+neDecisionTests.test_all_blacklisted_ips_and_explicit_flag_deny) ... ok
+test_dormant_trusted_device_requires_mfa (test_risk_engine.RiskEngineDecis
+ionTests.test_dormant_trusted_device_requires_mfa) ... 
+C:\mzazicare-backend\tests\test_risk_engine.py:74: DeprecationWarning: 
+datetime.datetime.utcnow() is deprecated and scheduled for removal in a 
+future version. Use timezone-aware objects to represent datetimes in UTC: 
+datetime.datetime.now(datetime.UTC).
+  last_login_at=datetime.utcnow() - timedelta(days=45))
+C:\mzazicare-backend\app\services\risk_engine.py:252: DeprecationWarning: 
+datetime.datetime.utcnow() is deprecated and scheduled for removal in a 
+future version. Use timezone-aware objects to represent datetimes in UTC: 
+datetime.datetime.now(datetime.UTC).
+  days_inactive = (datetime.utcnow() - device_profile.last_login_at).days 
+if device_profile.last_login_at else 0
+ok
+test_low_model_risk_dormant_device_still_requires_mfa (test_risk_engine.Ri
+skEngineDecisionTests.test_low_model_risk_dormant_device_still_requires_mf
+a) ... C:\mzazicare-backend\tests\test_risk_engine.py:90: 
+DeprecationWarning: datetime.datetime.utcnow() is deprecated and 
+scheduled for removal in a future version. Use timezone-aware objects to 
+represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  last_login_at=datetime.utcnow() - timedelta(days=45))
+ok
+test_model_loads_and_four_decision_tiers (test_risk_engine.RiskEngineDecis
+ionTests.test_model_loads_and_four_decision_tiers) ... C:\Users\nyari\AppD
+ata\Local\Programs\Python\Python313\Lib\multiprocessing\pool.py:747: 
+ResourceWarning: unclosed database in <sqlite3.Connection object at 
+0x000001A957824220>
+  def __init__(self, pool, callback, error_callback):
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_virtual_device_is_denied 
+(test_risk_engine.RiskEngineDecisionTests.test_virtual_device_is_denied) 
+... ok
+test_access_tokens_have_distinct_uuid4_ids_and_expiration (test_token_revo
+cation.TokenRevocationTests.test_access_tokens_have_distinct_uuid4_ids_and
+_expiration) ... ok
+test_auth_guard_rejects_revoked_and_legacy_tokens (test_token_revocation.T
+okenRevocationTests.test_auth_guard_rejects_revoked_and_legacy_tokens) 
+... ok
+test_blacklist_insert_is_idempotent_and_lookup_is_expiry_bounded (test_tok
+en_revocation.TokenRevocationTests.test_blacklist_insert_is_idempotent_and
+_lookup_is_expiry_bounded) ... ok
+test_google_risk_deny_revokes_existing_device_session (test_token_revocati
+on.TokenRevocationTests.test_google_risk_deny_revokes_existing_device_sess
+ion) ... ok
+test_issued_access_token_matches_its_device_session (test_token_revocation
+.TokenRevocationTests.test_issued_access_token_matches_its_device_session)
+ ... ok
+test_legacy_context_deny_also_revokes_and_requires_matching_user (test_tok
+en_revocation.TokenRevocationTests.test_legacy_context_deny_also_revokes_a
+nd_requires_matching_user) ... ok
+test_logout_revokes_access_token_paired_with_refresh_token (test_token_rev
+ocation.TokenRevocationTests.test_logout_revokes_access_token_paired_with_
+refresh_token) ... ok
+test_risk_and_behavioral_deny_revoke_current_access_token (test_token_revo
+cation.TokenRevocationTests.test_risk_and_behavioral_deny_revoke_current_a
+ccess_token) ... ok
+test_session_rotation_revokes_previous_device_token (test_token_revocation
+.TokenRevocationTests.test_session_rotation_revokes_previous_device_token)
+ ... ok
+
+----------------------------------------------------------------------
+Ran 73 tests in 11.051s
+
+OK (skipped=1)
+EXIT CODE: 0

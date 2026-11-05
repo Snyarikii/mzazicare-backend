@@ -1,0 +1,73 @@
+﻿== remotes ==
+origin	https://github.com/Snyarikii/mzazicare-mobile.git (fetch)
+origin	https://github.com/Snyarikii/mzazicare-mobile.git (push)
+== branches ==
+  feature/1-auth-screens
+  feature/2-navigation-architecture
+  feature/3-caregiver-dashboard
+  feature/4-admin-dashboard
+  feature/8-wire-api-telemetry
+* main
+  remotes/origin/HEAD -> origin/main
+  remotes/origin/feature/1-auth-screens
+  remotes/origin/feature/2-navigation-architecture
+  remotes/origin/feature/3-caregiver-dashboard
+  remotes/origin/feature/4-admin-dashboard
+  remotes/origin/feature/8-wire-api-telemetry
+  remotes/origin/main
+== tags ==
+v0.1.0-ui-prototype
+== status (summary) ==
+## main...origin/main
+ M App.js
+ M apiResponse.test.cjs
+ M app.config.js
+ M app.json
+ M devSessionTools.test.cjs
+ M logoutRevocation.test.cjs
+ M package-lock.json
+ M package.json
+ M passiveLock.test.cjs
+ M patientPrivacy.test.cjs
+ M profileSecurity.test.cjs
+ M src/components/DevSessionTools.js
+ M src/config/api.js
+ M src/constants/theme.js
+ M src/context/AuthContext.js
+ M src/screens/auth/LoginScreen.js
+ M src/screens/caregiver/CareLogs.js
+ M src/screens/caregiver/CaregiverDashboardScreen.js
+ M src/screens/profile/ProfileScreen.js
+ M src/services/telemetry.js
+?? .vscode/
+?? demoTools.test.cjs
+?? eas.json
+?? offlineBanner.test.cjs
+?? splashGate.test.cjs
+?? src/components/OfflineBanner.js
+?? src/config/demoTools.js
+?? src/services/splashGate.js
+== commit count ==
+21
+== log (hash|date|subject) ==
+57d2351|2026-11-03|feat(security/ui): replace custom PIN with native device auth and add Security & Privacy settings
+8c75724|2026-10-27|feat(security/ui): integrate 3-tier risk engine, biometrics, dual session lock, and UI fixes
+a131140|2026-10-23|feat(auth): add caregiver license verification and opt-out cancellation - Integrate 'Verify Professional License' step into caregiver onboarding flow. - Defer user creation by retaining temporary Google profile claims in local state prior to license submission. - Implement clean cancellation handler (handleCancelRegistration) to revoke Google session via GoogleSignin.signOut(), purge in-memory state, and reset navigation stack to RoleSelection. - Add inline validation error handling for 400 (invalid license) and 403 (name mismatch) responses.
+3167888|2026-10-18|feat(auth): implement 2-state auth flow, google oauth & namespaced pin management - Add State A/B login flow with biometric unlock and fallback options - Integrate Google OAuth using react-native-google-signin with JIT registration routing - Add namespaced 6-digit device PIN storage in SecureStore (user_pin_{id}) - Implement PIN change verification (biometrics with PIN Fallback) and confirmation modal - Add Google OAuth re-authentication recovery flow for 'Forgot PIN' - Refactor account switching to selectively trigger Google sign-out and preserve stored PINs - Update logout and PIN change confirmation dialog styling
+7a41385|2026-10-14|Merge branch 'main' of https://github.com/Snyarikii/mzazicare-mobile
+076baff|2026-10-14|feat: add family portal, caregiver session acceptance, and UX improvements - Add FamilyDashboardScreen, AddElderScreen, BookCareScreen, and role-based navigation - Update CaregiverDashboardScreen to accept incoming care requests, view assigned patient files, and submit visit vitals/notes - Extend Axios telemetry interceptor to track clinical record reads on caregiver patient endpoints - Replace raw ISO datetime input with quick date/time slot selectors and human-readable date formatting - Mask raw UUID on ProfileScreen with formatted role-based member badges (MZC-FAM / MZC-CG) - Remove deprecated patient linking code from RegisterScreen
+de9a8f3|2026-09-29|Create README.md
+e03c676|2026-09-23|fix verify auth error at MFAScreen
+55d16bb|2026-09-19|Enable otp email verification and log device data (#11)
+24e2b9b|2026-09-16|Merge pull request #9 from Snyarikii/feature/4-admin-dashboard
+740fab4|2026-09-16|feat(admin): implement security monitoring dashboard and SHAP diagnostics modal
+20eebde|2026-09-16|Merge pull request #8 from Snyarikii/feature/3-caregiver-dashboard
+96746ae|2026-09-16|feat(caregiver): implement caregiver dashboard, care logging modal
+a3840a5|2026-09-15|Merge pull request #7 from Snyarikii/feature/2-navigation-architecture
+c3937d8|2026-09-09|feat(nav): implement stack and bottom tab navigation architecture
+c74eb49|2026-09-08|Merge pull request #6 from Snyarikii/feature/1-auth-screens
+80f40f0|2026-09-08|feat(auth): add patient pairing code and validation to registration screen
+78b4d8e|2026-09-06|Merge pull request #5 from Snyarikii/feature/1-auth-screens
+f819338|2026-09-06|feat(auth): complete login, register, and step-up mfa screen interfaces
+e901169|2026-09-06|feat(auth): scaffold project structure and implement caregiver login screen
+81b00ec|2026-09-02|Initial commit

@@ -1,0 +1,145 @@
+{
+  "generated_at": "2026-11-04T22:35:27.743911+00:00",
+  "environment": {
+    "python": "3.13.7",
+    "scikit_learn": "1.9.1",
+    "pandas": "3.0.6",
+    "platform": "Windows-11-10.0.26300-SP0"
+  },
+  "data": {
+    "path": "C:\\mzazicare-backend\\ml\\data\\rba-dataset.csv",
+    "sampling": "random",
+    "rows_read": 31269264,
+    "sample_size": 18000,
+    "legitimate": 15000,
+    "attack": 3000,
+    "label": "Is Account Takeover OR Is Attack IP",
+    "train_rows": 14400,
+    "test_rows": 3600,
+    "test_legitimate": 3000,
+    "test_attack": 600
+  },
+  "model": {
+    "type": "RandomForestClassifier",
+    "n_estimators": 100,
+    "max_depth": 8,
+    "random_state": 42,
+    "features": [
+      "device_type",
+      "os_family",
+      "hour_sin",
+      "hour_cos",
+      "rtt_ms"
+    ],
+    "preprocessing": "OneHotEncoder(categorical) + StandardScaler(numerical)"
+  },
+  "results": {
+    "deployed_vs_retrained_prediction_agreement": 0.39555555555555555,
+    "retrained_random_forest": {
+      "threshold": 0.5,
+      "precision": 0.2857142857142857,
+      "recall": 0.0033333333333333335,
+      "f1": 0.006589785831960461,
+      "accuracy": 0.8325,
+      "roc_auc": 0.7130408333333332,
+      "average_precision": 0.28232564231877844,
+      "confusion_matrix": {
+        "TN": 2995,
+        "FP": 5,
+        "FN": 598,
+        "TP": 2
+      }
+    },
+    "deployed_random_forest": {
+      "threshold": 0.5,
+      "precision": 0.1662849289967934,
+      "recall": 0.605,
+      "f1": 0.2608695652173913,
+      "accuracy": 0.4286111111111111,
+      "roc_auc": 0.49121722222222225,
+      "average_precision": 0.16015152964937246,
+      "confusion_matrix": {
+        "TN": 1180,
+        "FP": 1820,
+        "FN": 237,
+        "TP": 363
+      }
+    },
+    "baseline_majority_class": {
+      "threshold": 0.5,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "accuracy": 0.8333333333333334,
+      "roc_auc": 0.5,
+      "average_precision": 0.16666666666666666,
+      "confusion_matrix": {
+        "TN": 3000,
+        "FP": 0,
+        "FN": 600,
+        "TP": 0
+      }
+    },
+    "baseline_logistic_regression": {
+      "threshold": 0.5,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "accuracy": 0.8333333333333334,
+      "roc_auc": 0.7026172222222222,
+      "average_precision": 0.2713216513356773,
+      "confusion_matrix": {
+        "TN": 3000,
+        "FP": 0,
+        "FN": 600,
+        "TP": 0
+      }
+    },
+    "engine_policy_simulation": {
+      "model": "deployed_random_forest",
+      "NEW": {
+        "legitimate_sign_ins_challenged_or_denied": 0.6443333333333333,
+        "attack_sign_ins_challenged_or_denied": 0.6216666666666667,
+        "attack_sign_ins_denied": 0.06833333333333333
+      },
+      "PROBATIONARY": {
+        "legitimate_sign_ins_challenged_or_denied": 0.3486666666666667,
+        "attack_sign_ins_challenged_or_denied": 0.43,
+        "attack_sign_ins_denied": 0.058333333333333334
+      },
+      "TRUSTED (active within 30 days)": {
+        "legitimate_sign_ins_challenged_or_denied": 0.06633333333333333,
+        "attack_sign_ins_challenged_or_denied": 0.06833333333333333,
+        "attack_sign_ins_denied": 0.0
+      },
+      "static_mfa_baseline": {
+        "legitimate_sign_ins_challenged_or_denied": 1.0,
+        "attack_sign_ins_challenged_or_denied": 1.0
+      }
+    },
+    "inference_latency_single_sign_in": {
+      "runs": 500,
+      "median_ms": 30.609249999542953,
+      "p95_ms": 32.061519995113485
+    },
+    "feature_importance": {
+      "num__hour_sin": 0.47050918459760427,
+      "num__hour_cos": 0.44181549306332923,
+      "cat__device_type_mobile": 0.024289282186677866,
+      "cat__device_type_desktop": 0.01450652648292958,
+      "num__rtt_ms": 0.010403879985871292,
+      "cat__os_family_Android": 0.009795228293844858,
+      "cat__os_family_iOS": 0.008734818030787283,
+      "cat__os_family_MacOS": 0.007154960028036639,
+      "cat__os_family_Windows": 0.006596535937715925,
+      "cat__os_family_Other": 0.0027390859986504354,
+      "cat__device_type_tablet": 0.001645472406176733,
+      "cat__device_type_unknown": 0.0010214046453256498,
+      "cat__device_type_bot": 0.0007881283430501426
+    }
+  },
+  "outputs": {
+    "roc_curve": "C:\\mzazicare-backend\\reports\\figures\\rf_roc_curve.png",
+    "sample_rows": "C:\\mzazicare-backend\\reports\\rba_sample_rows.csv"
+  }
+}

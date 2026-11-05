@@ -1,0 +1,351 @@
+{
+  "generated_at": "2026-11-05T05:33:32.015271+00:00",
+  "environment": {
+    "python": "3.13.7",
+    "scikit_learn": "1.9.1",
+    "pandas": "3.0.6",
+    "platform": "Windows-11-10.0.26300-SP0"
+  },
+  "data": {
+    "rows_read": 31269264,
+    "users": 4304857,
+    "out_of_order_timestamps": 0,
+    "pass_seconds": 785.1,
+    "path": "C:\\mzazicare-backend\\ml\\data\\rba-dataset.csv",
+    "random_fraction": 0.002,
+    "label": "Is Account Takeover OR Is Attack IP",
+    "sample_a": {
+      "seed": 42,
+      "logins": 18000,
+      "attack": 3000,
+      "train": 14400,
+      "test": 3600
+    },
+    "sample_b": {
+      "seed": 7,
+      "logins": 18000,
+      "attack": 3000,
+      "overlap_with_training": 0
+    }
+  },
+  "features": {
+    "login": [
+      "device_type",
+      "os_family",
+      "hour_sin",
+      "hour_cos",
+      "rtt_ms"
+    ],
+    "history": [
+      "first_login",
+      "log_prior_logins",
+      "log_hours_since_last",
+      "new_country",
+      "new_asn",
+      "new_user_agent",
+      "new_os",
+      "new_device_type"
+    ],
+    "excluded": "exact IP address (mobile networks reassign addresses often)"
+  },
+  "model": {
+    "type": "RandomForestClassifier",
+    "n_estimators": 100,
+    "max_depth": 8,
+    "random_state": 42
+  },
+  "threshold_selection": "F1-maximising on a 25% validation split of the training rows only",
+  "results": {
+    "rf_v1_features": {
+      "held_out_test": {
+        "roc_auc": 0.6919483333333334,
+        "average_precision": 0.265133837720365,
+        "at_0.5": {
+          "threshold": 0.5,
+          "precision": 1.0,
+          "recall": 0.0016666666666666668,
+          "f1": 0.0033277870216306157,
+          "accuracy": 0.8336111111111111,
+          "false_positive_rate": 0.0,
+          "confusion_matrix": {
+            "TN": 3000,
+            "FP": 0,
+            "FN": 599,
+            "TP": 1
+          }
+        },
+        "at_tuned_threshold": {
+          "threshold": 0.2099,
+          "precision": 0.2527096406160867,
+          "recall": 0.7383333333333333,
+          "f1": 0.3765405864853379,
+          "accuracy": 0.5925,
+          "false_positive_rate": 0.43666666666666665,
+          "confusion_matrix": {
+            "TN": 1690,
+            "FP": 1310,
+            "FN": 157,
+            "TP": 443
+          }
+        }
+      },
+      "independent_sample_b": {
+        "roc_auc": 0.7054384888888888,
+        "average_precision": 0.2764590316230545,
+        "at_0.5": {
+          "threshold": 0.5,
+          "precision": 0.2,
+          "recall": 0.0003333333333333333,
+          "f1": 0.0006655574043261231,
+          "accuracy": 0.8331666666666667,
+          "false_positive_rate": 0.0002666666666666667,
+          "confusion_matrix": {
+            "TN": 14996,
+            "FP": 4,
+            "FN": 2999,
+            "TP": 1
+          }
+        },
+        "at_tuned_threshold": {
+          "threshold": 0.2099,
+          "precision": 0.2643840451817861,
+          "recall": 0.749,
+          "f1": 0.39081659274719543,
+          "accuracy": 0.6108333333333333,
+          "false_positive_rate": 0.4168,
+          "confusion_matrix": {
+            "TN": 8748,
+            "FP": 6252,
+            "FN": 753,
+            "TP": 2247
+          }
+        }
+      }
+    },
+    "rf_v2_history_features": {
+      "held_out_test": {
+        "roc_auc": 0.7314627777777778,
+        "average_precision": 0.2939865071044452,
+        "at_0.5": {
+          "threshold": 0.5,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "accuracy": 0.8333333333333334,
+          "false_positive_rate": 0.0,
+          "confusion_matrix": {
+            "TN": 3000,
+            "FP": 0,
+            "FN": 600,
+            "TP": 0
+          }
+        },
+        "at_tuned_threshold": {
+          "threshold": 0.1626,
+          "precision": 0.2689335394126739,
+          "recall": 0.87,
+          "f1": 0.41086186540731995,
+          "accuracy": 0.5841666666666666,
+          "false_positive_rate": 0.473,
+          "confusion_matrix": {
+            "TN": 1581,
+            "FP": 1419,
+            "FN": 78,
+            "TP": 522
+          }
+        }
+      },
+      "independent_sample_b": {
+        "roc_auc": 0.7344195222222223,
+        "average_precision": 0.3014688567574464,
+        "at_0.5": {
+          "threshold": 0.5,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "accuracy": 0.8333333333333334,
+          "false_positive_rate": 0.0,
+          "confusion_matrix": {
+            "TN": 15000,
+            "FP": 0,
+            "FN": 3000,
+            "TP": 0
+          }
+        },
+        "at_tuned_threshold": {
+          "threshold": 0.1626,
+          "precision": 0.26957799706067603,
+          "recall": 0.856,
+          "f1": 0.4100271435414338,
+          "accuracy": 0.5894444444444444,
+          "false_positive_rate": 0.46386666666666665,
+          "confusion_matrix": {
+            "TN": 8042,
+            "FP": 6958,
+            "FN": 432,
+            "TP": 2568
+          }
+        }
+      },
+      "feature_importance": {
+        "cat__device_type_mobile": 0.20221570138363457,
+        "num__log_hours_since_last": 0.1603977621242944,
+        "num__log_prior_logins": 0.1431557523048172,
+        "cat__device_type_desktop": 0.0901672634731063,
+        "num__hour_sin": 0.06807385660575789,
+        "num__hour_cos": 0.06088993609007938,
+        "num__rtt_ms": 0.046611208811649325,
+        "cat__os_family_Other": 0.043035342473981705,
+        "cat__os_family_MacOS": 0.04008350831420221,
+        "num__new_user_agent": 0.027813028378776576,
+        "cat__device_type_bot": 0.02651580489711352,
+        "cat__os_family_iOS": 0.01956676124191695,
+        "cat__os_family_Windows": 0.011091315814300924,
+        "cat__os_family_Android": 0.010774063774424232,
+        "num__new_asn": 0.0077264763058524115,
+        "num__new_country": 0.007377913705200745,
+        "num__first_login": 0.007084655662636735,
+        "num__new_device_type": 0.007028820750496675,
+        "num__new_os": 0.006929177231661836,
+        "cat__device_type_tablet": 0.006789656975989517,
+        "cat__device_type_unknown": 0.006671993680106963
+      },
+      "latency_ms": {
+        "median": 54.723450004530605,
+        "p95": 66.00837000005413
+      }
+    },
+    "logreg_v2_history_features": {
+      "held_out_test": {
+        "roc_auc": 0.7186041666666666,
+        "average_precision": 0.286444663943484,
+        "at_0.5": {
+          "threshold": 0.5,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "accuracy": 0.8333333333333334,
+          "false_positive_rate": 0.0,
+          "confusion_matrix": {
+            "TN": 3000,
+            "FP": 0,
+            "FN": 600,
+            "TP": 0
+          }
+        },
+        "at_tuned_threshold": {
+          "threshold": 0.1983,
+          "precision": 0.26421800947867297,
+          "recall": 0.7433333333333333,
+          "f1": 0.38986013986013984,
+          "accuracy": 0.6122222222222222,
+          "false_positive_rate": 0.414,
+          "confusion_matrix": {
+            "TN": 1758,
+            "FP": 1242,
+            "FN": 154,
+            "TP": 446
+          }
+        }
+      },
+      "independent_sample_b": {
+        "roc_auc": 0.7207389000000001,
+        "average_precision": 0.2938840757015674,
+        "at_0.5": {
+          "threshold": 0.5,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "accuracy": 0.8333333333333334,
+          "false_positive_rate": 0.0,
+          "confusion_matrix": {
+            "TN": 15000,
+            "FP": 0,
+            "FN": 3000,
+            "TP": 0
+          }
+        },
+        "at_tuned_threshold": {
+          "threshold": 0.1983,
+          "precision": 0.2743642778926877,
+          "recall": 0.7516666666666667,
+          "f1": 0.40199661288884925,
+          "accuracy": 0.6272777777777778,
+          "false_positive_rate": 0.3976,
+          "confusion_matrix": {
+            "TN": 9036,
+            "FP": 5964,
+            "FN": 745,
+            "TP": 2255
+          }
+        }
+      }
+    },
+    "majority_class": {
+      "held_out_test": {
+        "roc_auc": 0.5,
+        "average_precision": 0.16666666666666666,
+        "at_0.5": {
+          "threshold": 0.5,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "accuracy": 0.8333333333333334,
+          "false_positive_rate": 0.0,
+          "confusion_matrix": {
+            "TN": 3000,
+            "FP": 0,
+            "FN": 600,
+            "TP": 0
+          }
+        },
+        "at_tuned_threshold": {
+          "threshold": 0.5,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "accuracy": 0.8333333333333334,
+          "false_positive_rate": 0.0,
+          "confusion_matrix": {
+            "TN": 3000,
+            "FP": 0,
+            "FN": 600,
+            "TP": 0
+          }
+        }
+      },
+      "independent_sample_b": {
+        "roc_auc": 0.5,
+        "average_precision": 0.16666666666666666,
+        "at_0.5": {
+          "threshold": 0.5,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "accuracy": 0.8333333333333334,
+          "false_positive_rate": 0.0,
+          "confusion_matrix": {
+            "TN": 15000,
+            "FP": 0,
+            "FN": 3000,
+            "TP": 0
+          }
+        },
+        "at_tuned_threshold": {
+          "threshold": 0.5,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "accuracy": 0.8333333333333334,
+          "false_positive_rate": 0.0,
+          "confusion_matrix": {
+            "TN": 15000,
+            "FP": 0,
+            "FN": 3000,
+            "TP": 0
+          }
+        }
+      }
+    }
+  }
+}

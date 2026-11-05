@@ -1,0 +1,251 @@
+{
+  "generated_at": "2026-11-04T22:24:55.678557+00:00",
+  "environment": {
+    "python": "3.13.7",
+    "scikit_learn": "1.9.1",
+    "pandas": "3.0.6",
+    "platform": "Windows-11-10.0.26300-SP0"
+  },
+  "data": {
+    "logon": "C:\\mzazicare-backend\\ml\\data\\logon.csv",
+    "file": "C:\\mzazicare-backend\\ml\\data\\file.csv",
+    "user_days": 330269,
+    "users": 1000,
+    "first_day": "2010-01-02",
+    "last_day": "2011-05-17",
+    "label_source": "events",
+    "insider_records": 70,
+    "malicious_user_days": 964
+  },
+  "model": {
+    "features": [
+      "total_logons",
+      "distinct_devices",
+      "activity_span_hours",
+      "off_hours_ratio",
+      "records_accessed_count",
+      "total_payload_bytes"
+    ],
+    "n_estimators": 150,
+    "contamination": 0.03,
+    "random_state": 42,
+    "scaler": "StandardScaler"
+  },
+  "definitions": {
+    "FAR": "malicious user-days not flagged / malicious user-days",
+    "FRR": "legitimate user-days flagged / legitimate user-days"
+  },
+  "transductive": {
+    "evaluated_user_days": 330269,
+    "malicious_user_days": 964,
+    "threshold_free": {
+      "roc_auc": 0.7543646981027124,
+      "average_precision": 0.008238451675040958
+    },
+    "isolation_forest_flag": {
+      "confusion_matrix": {
+        "TP": 59,
+        "FN": 905,
+        "FP": 9807,
+        "TN": 319498
+      },
+      "FAR": 0.9387966804979253,
+      "FRR": 0.02978090220312476,
+      "precision": 0.005980133792823839,
+      "recall_detection_rate": 0.061203319502074686,
+      "f1": 0.010895660203139427,
+      "flag_rate": 0.029872618986341436,
+      "random_baseline_same_flag_rate": {
+        "FAR": 0.9701273810136586,
+        "FRR": 0.029872618986341436
+      }
+    },
+    "runtime_challenge_or_deny": {
+      "confusion_matrix": {
+        "TP": 59,
+        "FN": 905,
+        "FP": 9807,
+        "TN": 319498
+      },
+      "FAR": 0.9387966804979253,
+      "FRR": 0.02978090220312476,
+      "precision": 0.005980133792823839,
+      "recall_detection_rate": 0.061203319502074686,
+      "f1": 0.010895660203139427,
+      "flag_rate": 0.029872618986341436,
+      "random_baseline_same_flag_rate": {
+        "FAR": 0.9701273810136586,
+        "FRR": 0.029872618986341436
+      }
+    },
+    "runtime_deny_only": {
+      "confusion_matrix": {
+        "TP": 0,
+        "FN": 964,
+        "FP": 149,
+        "TN": 329156
+      },
+      "FAR": 1.0,
+      "FRR": 0.00045246807670700417,
+      "precision": 0.0,
+      "recall_detection_rate": 0.0,
+      "f1": 0.0,
+      "flag_rate": 0.0004511473980300906,
+      "random_baseline_same_flag_rate": {
+        "FAR": 0.9995488526019699,
+        "FRR": 0.0004511473980300906
+      }
+    },
+    "user_level_isolation_forest_flag": {
+      "insider_users": 70,
+      "insider_users_detected_on_a_malicious_day": 22,
+      "legitimate_users": 930,
+      "legitimate_users_flagged_at_least_once": 134
+    }
+  },
+  "runtime_parity_check": "matched",
+  "inference_latency_single_user_day": {
+    "runs": 500,
+    "median_ms": 9.8075499990955,
+    "p95_ms": 10.85893499875965
+  },
+  "temporal_holdout": {
+    "cutoff_day": "2010-12-18",
+    "fit_user_days": 239723,
+    "malicious_user_days_in_fit": 698,
+    "evaluated_user_days": 90546,
+    "malicious_user_days": 266,
+    "threshold_free": {
+      "roc_auc": 0.7509528626062275,
+      "average_precision": 0.008167157678383372
+    },
+    "isolation_forest_flag": {
+      "confusion_matrix": {
+        "TP": 6,
+        "FN": 260,
+        "FP": 2258,
+        "TN": 88022
+      },
+      "FAR": 0.9774436090225563,
+      "FRR": 0.02501107665042091,
+      "precision": 0.00265017667844523,
+      "recall_detection_rate": 0.022556390977443608,
+      "f1": 0.004743083003952569,
+      "flag_rate": 0.025003865438561614,
+      "random_baseline_same_flag_rate": {
+        "FAR": 0.9749961345614384,
+        "FRR": 0.025003865438561614
+      }
+    },
+    "runtime_challenge_or_deny": {
+      "confusion_matrix": {
+        "TP": 6,
+        "FN": 260,
+        "FP": 2258,
+        "TN": 88022
+      },
+      "FAR": 0.9774436090225563,
+      "FRR": 0.02501107665042091,
+      "precision": 0.00265017667844523,
+      "recall_detection_rate": 0.022556390977443608,
+      "f1": 0.004743083003952569,
+      "flag_rate": 0.025003865438561614,
+      "random_baseline_same_flag_rate": {
+        "FAR": 0.9749961345614384,
+        "FRR": 0.025003865438561614
+      }
+    },
+    "runtime_deny_only": {
+      "confusion_matrix": {
+        "TP": 0,
+        "FN": 266,
+        "FP": 28,
+        "TN": 90252
+      },
+      "FAR": 1.0,
+      "FRR": 0.0003101462117855561,
+      "precision": 0.0,
+      "recall_detection_rate": 0.0,
+      "f1": 0.0,
+      "flag_rate": 0.00030923508492920727,
+      "random_baseline_same_flag_rate": {
+        "FAR": 0.9996907649150708,
+        "FRR": 0.00030923508492920727
+      }
+    },
+    "user_level_isolation_forest_flag": {
+      "insider_users": 20,
+      "insider_users_detected_on_a_malicious_day": 3,
+      "legitimate_users": 875,
+      "legitimate_users_flagged_at_least_once": 79
+    }
+  },
+  "deployed_artifact_on_all_user_days": {
+    "evaluated_user_days": 330269,
+    "malicious_user_days": 964,
+    "threshold_free": {
+      "roc_auc": 0.7543646981027124,
+      "average_precision": 0.008238451675040958
+    },
+    "isolation_forest_flag": {
+      "confusion_matrix": {
+        "TP": 59,
+        "FN": 905,
+        "FP": 9807,
+        "TN": 319498
+      },
+      "FAR": 0.9387966804979253,
+      "FRR": 0.02978090220312476,
+      "precision": 0.005980133792823839,
+      "recall_detection_rate": 0.061203319502074686,
+      "f1": 0.010895660203139427,
+      "flag_rate": 0.029872618986341436,
+      "random_baseline_same_flag_rate": {
+        "FAR": 0.9701273810136586,
+        "FRR": 0.029872618986341436
+      }
+    },
+    "runtime_challenge_or_deny": {
+      "confusion_matrix": {
+        "TP": 59,
+        "FN": 905,
+        "FP": 9807,
+        "TN": 319498
+      },
+      "FAR": 0.9387966804979253,
+      "FRR": 0.02978090220312476,
+      "precision": 0.005980133792823839,
+      "recall_detection_rate": 0.061203319502074686,
+      "f1": 0.010895660203139427,
+      "flag_rate": 0.029872618986341436,
+      "random_baseline_same_flag_rate": {
+        "FAR": 0.9701273810136586,
+        "FRR": 0.029872618986341436
+      }
+    },
+    "runtime_deny_only": {
+      "confusion_matrix": {
+        "TP": 0,
+        "FN": 964,
+        "FP": 149,
+        "TN": 329156
+      },
+      "FAR": 1.0,
+      "FRR": 0.00045246807670700417,
+      "precision": 0.0,
+      "recall_detection_rate": 0.0,
+      "f1": 0.0,
+      "flag_rate": 0.0004511473980300906,
+      "random_baseline_same_flag_rate": {
+        "FAR": 0.9995488526019699,
+        "FRR": 0.0004511473980300906
+      }
+    },
+    "user_level_isolation_forest_flag": {
+      "insider_users": 70,
+      "insider_users_detected_on_a_malicious_day": 22,
+      "legitimate_users": 930,
+      "legitimate_users_flagged_at_least_once": 134
+    }
+  }
+}

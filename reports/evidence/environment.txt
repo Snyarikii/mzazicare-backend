@@ -1,0 +1,48 @@
+﻿== host ==
+OS: Microsoft Windows 11 Home Single Language 10.0.26300
+CPU: AMD Ryzen 5 5625U with Radeon Graphics          (6 cores, 12 threads)
+RAM: 15.4 GB
+== runtimes ==
+python: Python 3.13.7
+node: v24.19.0
+npm: 11.17.0
+docker: 29.8.2
+docker compose: 5.6.0
+cloudflared: cloudflared version 2026.10.7 (built 2026-10-30T09:43 UTC)
+postgres (container): postgres (PostgreSQL) 16.15 (Debian 16.15-1.pgdg13+2)
+== containers ==
+mzazicare-backend | mzazicare-backend-web | Up 18 minutes | 0.0.0.0:8000->8000/tcp, [::]:8000->8000/tcp
+mzazicare-postgres | postgres:16 | Up 18 minutes (healthy) | 0.0.0.0:5432->5432/tcp, [::]:5432->5432/tcp
+== key python packages ==
+
+alembic            1.20.1
+asyncpg            0.31.0
+cryptography       50.0.2
+fastapi            0.141.1
+google-auth        2.62.0
+joblib             1.6.0
+numpy              2.5.3
+pandas             3.0.6
+PyJWT              2.14.0
+scikit-learn       1.9.1
+slowapi            0.1.10
+SQLAlchemy         2.0.54
+structlog          26.1.0
+uvicorn            0.53.0
+== key frontend packages (package.json) ==
+expo: ^57.0.22
+react-native: 0.86.3
+react: 19.2.3
+expo-local-authentication: ~57.0.3
+expo-secure-store: ~57.0.4
+expo-screen-capture: ~57.0.3
+@react-native-google-signin/google-signin: ^16.1.5
+@react-navigation/native: ^7.3.18
+== Android device (adb) ==
+List of devices attached
+R58W215VMVR            device product:a14nnxx model:SM_A145F device:a14 transport_id:8
+
+model: SM-A145F
+android: 15 (API 35)
+
+

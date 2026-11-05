@@ -1,0 +1,195 @@
+{
+  "generated_at": "2026-11-04T23:11:20.832230+00:00",
+  "environment": {
+    "python": "3.13.7",
+    "scikit_learn": "1.9.1",
+    "pandas": "3.0.6",
+    "platform": "Windows-11-10.0.26300-SP0"
+  },
+  "data": {
+    "path": "C:\\mzazicare-backend\\ml\\data\\rba-dataset.csv",
+    "sampling": "random",
+    "seed": 7,
+    "rows_read": 31269264,
+    "sample_size": 18000,
+    "legitimate": 15000,
+    "attack": 3000,
+    "label": "Is Account Takeover OR Is Attack IP",
+    "train_rows": 14400,
+    "test_rows": 3600,
+    "test_legitimate": 3000,
+    "test_attack": 600
+  },
+  "model": {
+    "type": "RandomForestClassifier",
+    "n_estimators": 100,
+    "max_depth": 8,
+    "random_state": 42,
+    "features": [
+      "device_type",
+      "os_family",
+      "hour_sin",
+      "hour_cos",
+      "rtt_ms"
+    ],
+    "preprocessing": "OneHotEncoder(categorical) + StandardScaler(numerical)"
+  },
+  "results": {
+    "deployed_vs_retrained_prediction_agreement": 0.9986111111111111,
+    "retrained_random_forest": {
+      "threshold": 0.5,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "accuracy": 0.8333333333333334,
+      "roc_auc": 0.7012936111111111,
+      "average_precision": 0.2702672425503121,
+      "confusion_matrix": {
+        "TN": 3000,
+        "FP": 0,
+        "FN": 600,
+        "TP": 0
+      }
+    },
+    "deployed_random_forest": {
+      "threshold": 0.5,
+      "precision": 0.2,
+      "recall": 0.0016666666666666668,
+      "f1": 0.003305785123966942,
+      "accuracy": 0.8325,
+      "roc_auc": 0.7062330555555556,
+      "average_precision": 0.2754420604629021,
+      "confusion_matrix": {
+        "TN": 2996,
+        "FP": 4,
+        "FN": 599,
+        "TP": 1
+      }
+    },
+    "baseline_majority_class": {
+      "threshold": 0.5,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "accuracy": 0.8333333333333334,
+      "roc_auc": 0.5,
+      "average_precision": 0.16666666666666666,
+      "confusion_matrix": {
+        "TN": 3000,
+        "FP": 0,
+        "FN": 600,
+        "TP": 0
+      }
+    },
+    "baseline_logistic_regression": {
+      "threshold": 0.5,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "accuracy": 0.8333333333333334,
+      "roc_auc": 0.6793988888888889,
+      "average_precision": 0.25196163935677335,
+      "confusion_matrix": {
+        "TN": 3000,
+        "FP": 0,
+        "FN": 600,
+        "TP": 0
+      }
+    },
+    "tuned_threshold": {
+      "selected_on": "25% validation split of the training rows (F1-maximising)",
+      "retrained_random_forest": {
+        "threshold": 0.1730570929698241,
+        "precision": 0.24617590822179733,
+        "recall": 0.8583333333333333,
+        "f1": 0.3826151560178306,
+        "accuracy": 0.5383333333333333,
+        "roc_auc": 0.7012936111111111,
+        "average_precision": 0.2702672425503121,
+        "confusion_matrix": {
+          "TN": 1423,
+          "FP": 1577,
+          "FN": 85,
+          "TP": 515
+        }
+      },
+      "deployed_random_forest": {
+        "threshold": 0.1730570929698241,
+        "precision": 0.24153917477978673,
+        "recall": 0.8683333333333333,
+        "f1": 0.3779470438882844,
+        "accuracy": 0.5236111111111111,
+        "roc_auc": 0.7062330555555556,
+        "average_precision": 0.2754420604629021,
+        "confusion_matrix": {
+          "TN": 1364,
+          "FP": 1636,
+          "FN": 79,
+          "TP": 521
+        }
+      },
+      "baseline_logistic_regression": {
+        "threshold": 0.19755573887051245,
+        "precision": 0.24821133736929005,
+        "recall": 0.7516666666666667,
+        "f1": 0.37318990484071163,
+        "accuracy": 0.5791666666666667,
+        "roc_auc": 0.6793988888888889,
+        "average_precision": 0.25196163935677335,
+        "confusion_matrix": {
+          "TN": 1634,
+          "FP": 1366,
+          "FN": 149,
+          "TP": 451
+        }
+      }
+    },
+    "engine_policy_simulation": {
+      "model": "deployed_random_forest",
+      "NEW": {
+        "legitimate_sign_ins_challenged_or_denied": 0.10366666666666667,
+        "attack_sign_ins_challenged_or_denied": 0.15666666666666668,
+        "attack_sign_ins_denied": 0.0
+      },
+      "PROBATIONARY": {
+        "legitimate_sign_ins_challenged_or_denied": 0.10266666666666667,
+        "attack_sign_ins_challenged_or_denied": 0.15166666666666667,
+        "attack_sign_ins_denied": 0.0
+      },
+      "TRUSTED (active within 30 days)": {
+        "legitimate_sign_ins_challenged_or_denied": 0.0,
+        "attack_sign_ins_challenged_or_denied": 0.0,
+        "attack_sign_ins_denied": 0.0
+      },
+      "static_mfa_baseline": {
+        "legitimate_sign_ins_challenged_or_denied": 1.0,
+        "attack_sign_ins_challenged_or_denied": 1.0
+      }
+    },
+    "inference_latency_single_sign_in": {
+      "runs": 500,
+      "median_ms": 55.592649998288834,
+      "p95_ms": 59.545710002203116
+    },
+    "feature_importance": {
+      "cat__device_type_mobile": 0.22909597904730125,
+      "cat__device_type_desktop": 0.13577983465831367,
+      "num__hour_sin": 0.12107504033158598,
+      "num__rtt_ms": 0.11937341399109229,
+      "num__hour_cos": 0.1043900476571782,
+      "cat__os_family_MacOS": 0.08070687088734312,
+      "cat__os_family_Other": 0.057976501193454426,
+      "cat__os_family_iOS": 0.043424100016890836,
+      "cat__device_type_bot": 0.04285370230947988,
+      "cat__os_family_Windows": 0.02205978216647978,
+      "cat__os_family_Android": 0.021316159461235763,
+      "cat__device_type_tablet": 0.014626283101141821,
+      "cat__device_type_unknown": 0.007309944630010647,
+      "cat__os_family_Linux": 1.234054849242957e-05
+    }
+  },
+  "outputs": {
+    "roc_curve": "C:\\mzazicare-backend\\reports\\figures\\rf_roc_curve.png",
+    "sample_rows": "C:\\mzazicare-backend\\reports\\rba_sample_rows.csv"
+  }
+}

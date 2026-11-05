@@ -1,0 +1,23 @@
+﻿request 1 : 200  1542 ms
+request 2 : 200  467.3 ms
+request 3 : 200  498.4 ms
+request 4 : 200  513 ms
+request 5 : 200  510.9 ms
+request 6 : 200  553.9 ms
+request 7 : 200  471.5 ms
+request 8 : 200  421.4 ms
+request 9 : 200  411.8 ms
+request 10 : 200  515.9 ms
+request 11 : 200  509.6 ms
+request 12 : 200  491.6 ms
+request 13 : 200  408.2 ms
+request 14 : 200  625.7 ms
+request 15 : 200  436.3 ms
+request 16 : 200  422.6 ms
+request 17 : 200  576.2 ms
+request 18 : 200  452.1 ms
+request 19 : 200  476.6 ms
+request 20 : 200  502.3 ms
+last body: {"status":"online","database":"connected","service":"MzaziCare API","version":"1.0.0"}
+median ms: 498.4
+p95 ms: 625.7
