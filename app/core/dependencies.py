@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.core.logger import bind_request_user_id
 from app.db.session import get_db
 from app.models.entities import User
 from app.services.token_blacklist import is_token_blacklisted
@@ -35,6 +36,7 @@ async def get_current_access_claims(token: str = Depends(oauth2_scheme),
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                             detail="Token has been revoked",
                             headers={"WWW-Authenticate": "Bearer"})
+    bind_request_user_id(payload["sub"])
     return payload
 
 

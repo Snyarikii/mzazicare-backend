@@ -9,6 +9,10 @@ from sqlalchemy.dialects import postgresql
 from app.api.v1.endpoints import auth
 from app.models.entities import BehavioralAuditLog, User, UserDeviceProfile
 from app.services.token_blacklist import blacklist_refresh_jti
+from app.core.rate_limit import limiter
+
+# These tests call endpoints directly with hand-built requests, so rate limiting is off.
+limiter.enabled = False
 
 
 class Scalars:

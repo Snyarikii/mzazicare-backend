@@ -25,6 +25,9 @@ class Settings(BaseSettings):
   GOOGLE_CLIENT_IDS: str = ""
   GOOGLE_CLIENT_ID: str = ""
   ADMIN_EMAIL: Optional[str] = None
+  RATE_LIMIT_ENABLED: bool = True
+  # "development" prints readable logs; any other value (e.g. production) prints JSON.
+  ENVIRONMENT: str = "development"
 
   @model_validator(mode="after")
   def configure_phi_encryption_key(self):

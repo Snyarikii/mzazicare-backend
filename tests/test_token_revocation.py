@@ -17,6 +17,10 @@ from app.schemas.telemetry import TelemetryIngestRequest
 from app.services.behavioral_engine import behavioral_engine
 from app.services.risk_engine import risk_engine
 from app.services.token_blacklist import blacklist_token, is_token_blacklisted
+from app.core.rate_limit import limiter
+
+# These tests call endpoints directly with hand-built requests, so rate limiting is off.
+limiter.enabled = False
 
 
 class Result:

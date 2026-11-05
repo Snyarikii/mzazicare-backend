@@ -11,6 +11,10 @@ from app.core.config import settings
 from app.core.security import create_refresh_token
 from app.models.entities import BehavioralAuditLog, User, UserDeviceProfile
 from app.schemas.auth import RefreshTokenRequest
+from app.core.rate_limit import limiter
+
+# These tests call endpoints directly with hand-built requests, so rate limiting is off.
+limiter.enabled = False
 
 
 class Result:

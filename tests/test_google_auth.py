@@ -10,6 +10,10 @@ from app.api.v1.endpoints import auth
 from app.core.security import create_refresh_token
 from app.models.entities import User, UserDeviceProfile
 from app.schemas.auth import BiometricUnlockRequest, GoogleAuthRequest, VerifyMfaRequest
+from app.core.rate_limit import limiter
+
+# These tests call endpoints directly with hand-built requests, so rate limiting is off.
+limiter.enabled = False
 
 
 

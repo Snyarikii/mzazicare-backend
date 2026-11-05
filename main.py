@@ -1,14 +1,19 @@
 from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.core.logger import RequestLoggingMiddleware, configure_logging
+from app.core.rate_limit import limiter
 from app.db.session import engine, get_db
 from app.api.v1.endpoints import admin, auth, care_logs, caregiver, family, patients, telemetry
 from app.services.risk_engine import risk_engine
 
+configure_logging()
 
 
 @asynccontextmanager
@@ -38,6 +43,10 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Rate limiting: limiter state for the @limiter.limit decorators, and HTTP 429 on breach.
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 # Allow requests from mobile and web frontends
 app.add_middleware(
     CORSMiddleware,
@@ -46,6 +55,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Added last so it is the outermost middleware: it times and logs every request,
+# including CORS preflights and rate-limited (429) responses.
+app.add_middleware(RequestLoggingMiddleware)
 
 @app.get(f"{settings.API_V1_STR}/health", status_code=status.HTTP_200_OK)
 async def health_check(db: AsyncSession = Depends(get_db)):

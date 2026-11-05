@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.dependencies import get_current_access_claims, get_current_active_user
+from app.core.rate_limit import limiter
 from app.core.security import create_access_token, create_refresh_token
 from app.db.session import get_db
 from app.models.entities import (BehavioralAuditLog, ContextualLogin, SecurityAlert,
@@ -305,6 +306,7 @@ async def create_google_account(
 
 
 @router.post("/google", response_model=AuthTokenResponse | NeedsRegistrationResponse)
+@limiter.limit("5/minute")
 async def google_auth(payload: GoogleAuthRequest, background_tasks: BackgroundTasks,
                       request: Request, db: AsyncSession = Depends(get_db)):
     email, name, sub = await verify_google_id_token(payload.id_token)
@@ -486,6 +488,7 @@ async def resend_mfa_code(payload: ResendMfaRequest,
 
 
 @router.post("/refresh", response_model=AuthTokenResponse)
+@limiter.limit("20/minute")
 async def refresh_session(payload: RefreshTokenRequest, request: Request,
                           db: AsyncSession = Depends(get_db)):
     try:
@@ -629,6 +632,7 @@ async def list_active_sessions(request: Request,
 
 
 @router.post("/revoke-all-sessions", response_model=RevokeSessionsResponse)
+@limiter.limit("10/minute")
 async def revoke_all_other_sessions(request: Request,
                                     claims: dict = Depends(get_current_access_claims),
                                     current_user: User = Depends(get_current_active_user),
