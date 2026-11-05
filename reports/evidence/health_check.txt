@@ -1,23 +1,23 @@
-﻿request 1 : 200  1542 ms
-request 2 : 200  467.3 ms
-request 3 : 200  498.4 ms
-request 4 : 200  513 ms
-request 5 : 200  510.9 ms
-request 6 : 200  553.9 ms
-request 7 : 200  471.5 ms
-request 8 : 200  421.4 ms
-request 9 : 200  411.8 ms
-request 10 : 200  515.9 ms
-request 11 : 200  509.6 ms
-request 12 : 200  491.6 ms
-request 13 : 200  408.2 ms
-request 14 : 200  625.7 ms
-request 15 : 200  436.3 ms
-request 16 : 200  422.6 ms
-request 17 : 200  576.2 ms
-request 18 : 200  452.1 ms
-request 19 : 200  476.6 ms
-request 20 : 200  502.3 ms
+﻿request 1 : 200  1544.6 ms
+request 2 : 200  464.4 ms
+request 3 : 200  458 ms
+request 4 : 200  484.8 ms
+request 5 : 200  473 ms
+request 6 : 200  474.8 ms
+request 7 : 200  484.4 ms
+request 8 : 200  491 ms
+request 9 : 200  460.6 ms
+request 10 : 200  444.8 ms
+request 11 : 200  448.4 ms
+request 12 : 200  459 ms
+request 13 : 200  459.1 ms
+request 14 : 200  454.8 ms
+request 15 : 200  447 ms
+request 16 : 200  573.6 ms
+request 17 : 200  462.3 ms
+request 18 : 200  455.6 ms
+request 19 : 200  455.4 ms
+request 20 : 200  464.3 ms
 last body: {"status":"online","database":"connected","service":"MzaziCare API","version":"1.0.0"}
-median ms: 498.4
-p95 ms: 625.7
+median ms: 462.3
+p95 ms: 573.6

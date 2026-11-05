@@ -3,7 +3,7 @@ import json
 import unicodedata
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy import case, exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,7 +14,7 @@ from app.core.dependencies import (
 from app.db.session import get_db
 from app.models.entities import CareLog, CareSession, ElderlyProfile, MockCaregiverRegistry, User
 from app.api.v1.endpoints.auth import (
-    create_google_account, find_google_account, verify_google_id_token,
+    create_google_account, find_google_account, registration_context, verify_google_id_token,
 )
 from app.schemas.auth import AuthTokenResponse, UserResponse
 from app.schemas.caregiver_activity import ScheduleVisit
@@ -75,6 +75,7 @@ def check_registered_name(registry: MockCaregiverRegistry, full_name: str) -> No
 async def verify_license(
     payload: LicenseVerificationRequest,
     db: AsyncSession = Depends(get_db),
+    request: Request = None,
 ):
     email, name, sub = await verify_google_id_token(payload.google_id_token)
     existing = await find_google_account(db, email, sub)
@@ -88,6 +89,7 @@ async def verify_license(
         fingerprint=payload.device_fingerprint, raw=payload.raw_features,
         ip_address=payload.ip_address, geolocation=payload.geolocation,
         license_number=license_number,
+        context=registration_context(request, payload.raw_features, payload.ip_address),
     )
 
 

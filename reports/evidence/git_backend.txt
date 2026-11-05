@@ -12,42 +12,41 @@ origin	https://github.com/Snyarikii/mzazicare-backend (push)
   remotes/origin/feature/7-auth-telemetry-endpoints
   remotes/origin/main
 == tags ==
+v0.3.0-sprint3
 == status (summary) ==
 ## main...origin/main
  M .gitignore
  M README.md
  M app/api/v1/endpoints/auth.py
- M app/core/config.py
- M app/core/dependencies.py
- M app/db/session.py
+ M app/api/v1/endpoints/caregiver.py
  M app/ml/adaptive_risk_model.joblib
- M app/ml/behavioral_anomaly_model.joblib
-AM docker-entrypoint.sh
- M main.py
- M ml/train_behavioral_model.py
- M ml/train_risk_model.py
- M requirements.txt
- M tests/test_device_sessions.py
+ M app/models/entities.py
+ M app/services/risk_engine.py
+ M ml/train_risk_model_v2.py
+ M reports/evidence/backend_tests.txt
+ M reports/evidence/frontend_tests.txt
+ M reports/evidence/git_backend.txt
+ M reports/figures/rf_v2_ato_roc_curve.png
+ M reports/rf_v2_ato_evaluation.json
+ M scripts/evaluate_risk_rf.py
+ M tests/test_caregiver_verification.py
  M tests/test_google_auth.py
- M tests/test_refresh_auth.py
- M tests/test_risk_engine.py
  M tests/test_token_revocation.py
-?? .dockerignore
-?? Dockerfile
-?? app/core/logger.py
-?? app/core/rate_limit.py
-?? docker-compose.yml
-?? reports/
-?? requirements-dev.txt
-?? scripts/collect_evidence.ps1
-?? scripts/evaluate_risk_rf.py
-?? scripts/evaluate_ueba_iforest.py
-?? tests/test_db_logging.py
-?? tests/test_rate_limits.py
-?? tests/test_request_logging.py
+?? alembic/versions/20261106_login_history_context.py
+?? app/services/login_history.py
+?? ml/artifacts/adaptive_risk_model_ato.joblib
+?? ml/artifacts/adaptive_risk_model_v1.joblib
+?? reports/figures/rf_v2_ato_roc_curve_all_attempts.png
+?? reports/rf_v2_ato_evaluation_all_attempts.json
+?? reports/rf_v2_ato_out_of_fold.csv
+?? tests/test_login_history.py
 == commit count ==
-13
+17
 == log (hash|date|subject) ==
+c3b0967|2026-11-05|feat(eval): model evaluation scripts, per-user history model and reports
+3e8ddff|2026-11-05|fix(ml): correct CERT date parsing and RBA sampling; retrain both models
+15e057b|2026-11-05|feat(security): rate limiting, structured logging and proxy-aware risk evaluation
+529a8f1|2026-11-05|build(deploy): containerise API and database with Docker Compose
 0cbb92f|2026-11-03|feat(security): add PHI field encryption, device session management, and admin console API
 6c8930b|2026-10-27|feat(security): add 3-tier behavioral reset and database JWT token blacklisting
 3f0eafd|2026-10-23|feat(auth): implement deferred registration and mock license verification - Add mock_caregiver_registry model and database seed table for test licenses. - Update POST /api/v1/endpoints/auth.py -> google to defer database writes for new accounts until verification completes. - Implement POST /api/v1/endpoints/caregiver.py -> verify endpoint with name-matching against registry records and atomic user creation. - Update get_current_verified_caregiver security dependency to enforce is_verified and erification_status checks across protected routes.

@@ -30,7 +30,8 @@ from app.schemas.auth import (AuthTokenResponse, BiometricUnlockRequest,
                               ResendMfaRequest, RevokeSessionsResponse,
                               UserResponse, VerifyMfaRequest)
 from app.services.email import mfa_email_configured, send_mfa_email
-from app.services.risk_engine import risk_engine
+from app.services import login_history
+from app.services.risk_engine import normalise_os_family, risk_engine
 from app.services.token_blacklist import (blacklist_refresh_jti, blacklist_token,
                                           is_token_blacklisted)
 
@@ -129,11 +130,13 @@ def _risk_simulation_inputs(request: Request, profile: UserDeviceProfile | None,
 
 def _audit(db: AsyncSession, user: User, fingerprint: str, ip: str | None,
            geolocation: str | None, score: float, success: bool,
-           assessment: dict | None = None):
+           assessment: dict | None = None, context: dict | None = None):
+    context = dict(context or {})
+    observed_ip = context.pop("ip", None)
     db.add(ContextualLogin(
         user_id=user.user_id, device_fingerprint=fingerprint,
-        ip_address=ip or "127.0.0.1", geolocation=geolocation,
-        login_risk_score=score, is_successful=success,
+        ip_address=(observed_ip or ip or "127.0.0.1")[:45], geolocation=geolocation,
+        login_risk_score=score, is_successful=success, **context,
     ))
     if assessment is not None:
         action = assessment.get("risk_action") or (
@@ -162,10 +165,37 @@ def _clean_label(value, limit: int = 64) -> str | None:
 
 
 def _observed_ip(request: Request | None, reported: str | None = None) -> str | None:
-    """Prefer the address the server saw; fall back to the client-reported one."""
-    if request is not None and request.client and request.client.host:
-        return request.client.host[:45]
+    """Prefer the address Cloudflare saw, then the socket address, then the client-reported one."""
+    if request is not None:
+        cf_ip = (request.headers.get("cf-connecting-ip") or "").strip()
+        if cf_ip:
+            return cf_ip[:45]
+        if request.client and request.client.host:
+            return request.client.host[:45]
     return (reported or None) and reported[:45]
+
+
+async def _login_context(db: AsyncSession, user: User, request: Request, raw: dict | None,
+                         risk_ip: str | None, reported_ip: str | None):
+    """Country, network and app signature for this login, plus the user's history features."""
+    ctx = login_history.build_context(request, raw, risk_ip=risk_ip, reported_ip=reported_ip,
+                                      os_family=normalise_os_family(raw or {}))
+    ctx.history = await login_history.lookup_history(db, user.user_id, ctx)
+    return ctx
+
+
+def _context_columns(ctx) -> dict:
+    return {"ip": ctx.ip, **ctx.columns()} if ctx is not None else {}
+
+
+def registration_context(request: Request | None, raw: dict | None,
+                         reported_ip: str | None = None) -> dict:
+    """Login context for the sign-in that creates an account, so it starts the user's history."""
+    if request is None:
+        return {}
+    return _context_columns(login_history.build_context(
+        request, raw, risk_ip=None, reported_ip=reported_ip,
+        os_family=normalise_os_family(raw or {})))
 
 
 def _apply_session_metadata(profile: UserDeviceProfile, raw: dict | None,
@@ -284,6 +314,7 @@ async def create_google_account(
     db: AsyncSession, *, email: str, name: str, sub: str, role: str,
     fingerprint: str, raw: dict | None = None, ip_address: str | None = None,
     geolocation: str | None = None, license_number: str | None = None,
+    context: dict | None = None,
 ) -> AuthTokenResponse:
     role = "ADMIN" if _is_admin_email(email) else role
     user = User(
@@ -297,7 +328,7 @@ async def create_google_account(
         await db.flush()
         profile = await _replace_device_session(db, user, fingerprint, None, raw or {},
                                                 ip=ip_address)
-        _audit(db, user, fingerprint, ip_address, geolocation, 0.10, True)
+        _audit(db, user, fingerprint, ip_address, geolocation, 0.10, True, context=context)
         await db.commit()
     except IntegrityError as exc:
         await db.rollback()
@@ -319,6 +350,7 @@ async def google_auth(payload: GoogleAuthRequest, background_tasks: BackgroundTa
                 db, email=email, name=name, sub=sub, role="ADMIN",
                 fingerprint=payload.device_fingerprint, raw=raw,
                 ip_address=payload.ip_address, geolocation=payload.geolocation,
+                context=registration_context(request, raw, payload.ip_address),
             )
         if payload.role is not None and payload.role not in ("family", "caregiver"):
             raise HTTPException(status_code=400, detail="Select Family Member or Caregiver to register.")
@@ -341,8 +373,9 @@ async def google_auth(payload: GoogleAuthRequest, background_tasks: BackgroundTa
     if profile is not None and profile.trust_state == "REVOKED":
         raise HTTPException(status_code=403, detail="Device access has been revoked.")
     risk_ip, risk_profile = _risk_simulation_inputs(request, profile, payload.ip_address)
+    ctx = await _login_context(db, user, request, raw, risk_ip, payload.ip_address)
     assessment = await risk_engine.evaluate_risk_and_revoke(
-        raw_features=raw, ip_address=risk_ip, device_profile=risk_profile,
+        raw_features=raw, ip_address=risk_ip, device_profile=risk_profile, history=ctx.history,
         current_jti=profile.access_jti if profile else None,
         user_id=str(user.user_id),
         expires_at=profile.access_expires_at if profile else None,
@@ -355,7 +388,7 @@ async def google_auth(payload: GoogleAuthRequest, background_tasks: BackgroundTa
             profile.access_jti = None
             profile.access_expires_at = None
         _audit(db, user, payload.device_fingerprint, payload.ip_address,
-               payload.geolocation, score, False, assessment)
+               payload.geolocation, score, False, assessment, _context_columns(ctx))
         await db.commit()
         return JSONResponse(status_code=403, content={
             "status": "ACCESS_DENIED",
@@ -367,7 +400,7 @@ async def google_auth(payload: GoogleAuthRequest, background_tasks: BackgroundTa
             profile.refresh_jti = None
         _challenge(user, payload.device_fingerprint, raw, background_tasks)
         _audit(db, user, payload.device_fingerprint, payload.ip_address,
-               payload.geolocation, score, False, assessment)
+               payload.geolocation, score, False, assessment, _context_columns(ctx))
         await db.commit()
         return _response(user, payload.device_fingerprint, score, step_up=True,
                          anomaly=assessment["anomaly_detected"], auth_status="MFA_REQUIRED")
@@ -375,14 +408,15 @@ async def google_auth(payload: GoogleAuthRequest, background_tasks: BackgroundTa
     profile = await _replace_device_session(db, user, payload.device_fingerprint, profile, raw,
                                             ip=_observed_ip(request, payload.ip_address))
     _audit(db, user, payload.device_fingerprint, payload.ip_address,
-           payload.geolocation, score, True, assessment)
+           payload.geolocation, score, True, assessment, _context_columns(ctx))
     await db.commit()
     return _response(user, payload.device_fingerprint, score, profile=profile,
                      auth_status="SUCCESS")
 
 
 @router.post("/register-family", response_model=AuthTokenResponse)
-async def register_family(payload: GoogleAuthRequest, db: AsyncSession = Depends(get_db)):
+async def register_family(payload: GoogleAuthRequest, db: AsyncSession = Depends(get_db),
+                          request: Request = None):
     email, name, sub = await verify_google_id_token(payload.id_token)
     existing = await find_google_account(db, email, sub)
     if existing is not None:
@@ -391,6 +425,7 @@ async def register_family(payload: GoogleAuthRequest, db: AsyncSession = Depends
         db, email=email, name=name, sub=sub, role="family",
         fingerprint=payload.device_fingerprint, raw=payload.raw_features,
         ip_address=payload.ip_address, geolocation=payload.geolocation,
+        context=registration_context(request, payload.raw_features, payload.ip_address),
     )
 
 
@@ -415,8 +450,9 @@ async def biometric_unlock(payload: BiometricUnlockRequest,
             or not secrets.compare_digest(profile.refresh_jti, claims.get("jti", ""))):
         raise HTTPException(status_code=401, detail="Device is not enrolled.")
     risk_ip, risk_profile = _risk_simulation_inputs(request, profile, payload.ip_address)
+    ctx = await _login_context(db, user, request, payload.raw_features, risk_ip, payload.ip_address)
     assessment = await risk_engine.evaluate_risk_and_revoke(
-        raw_features=payload.raw_features, ip_address=risk_ip,
+        raw_features=payload.raw_features, ip_address=risk_ip, history=ctx.history,
         device_profile=risk_profile, current_jti=profile.access_jti,
         user_id=str(user.user_id), expires_at=profile.access_expires_at,
     )
@@ -427,20 +463,22 @@ async def biometric_unlock(payload: BiometricUnlockRequest,
         profile.access_jti = None
         profile.access_expires_at = None
         _audit(db, user, payload.device_fingerprint, payload.ip_address,
-               None, score, False, assessment)
+               None, score, False, assessment, _context_columns(ctx))
         await db.commit()
         raise HTTPException(status_code=403, detail="Sign-in denied by risk assessment.")
     if assessment["step_up_required"]:
         profile.refresh_jti = None
         _challenge(user, payload.device_fingerprint, payload.raw_features, background_tasks)
-        _audit(db, user, payload.device_fingerprint, payload.ip_address, None, score, False, assessment)
+        _audit(db, user, payload.device_fingerprint, payload.ip_address, None, score, False, assessment,
+               _context_columns(ctx))
         await db.commit()
         return _response(user, payload.device_fingerprint, score, step_up=True,
                          anomaly=assessment["anomaly_detected"], auth_status="MFA_REQUIRED")
     profile = await _replace_device_session(db, user, payload.device_fingerprint,
                                             profile, payload.raw_features,
                                             ip=_observed_ip(request, payload.ip_address))
-    _audit(db, user, payload.device_fingerprint, payload.ip_address, None, score, True, assessment)
+    _audit(db, user, payload.device_fingerprint, payload.ip_address, None, score, True, assessment,
+           _context_columns(ctx))
     await db.commit()
     return _response(user, payload.device_fingerprint, score, profile=profile)
 
@@ -463,6 +501,8 @@ async def verify_mfa_challenge(payload: VerifyMfaRequest,
     user.mfa_code = None
     user.mfa_expires_at = None
     user.mfa_device_fingerprint = None
+    # The verified login inherits the challenged login's context, so it joins the user's history.
+    challenged = await login_history.latest_challenge_columns(db, user.user_id, payload.device_fingerprint)
     profile = await _device(db, user, payload.device_fingerprint)
     profile = await _replace_device_session(
         db, user, payload.device_fingerprint, profile,
@@ -470,7 +510,7 @@ async def verify_mfa_challenge(payload: VerifyMfaRequest,
          "device_name": payload.device_name, "model_id": payload.model_id,
          "os_name": payload.os_name}, mfa=True,
     )
-    _audit(db, user, payload.device_fingerprint, None, None, 0.10, True)
+    _audit(db, user, payload.device_fingerprint, None, None, 0.10, True, context=challenged)
     await db.commit()
     return _response(user, payload.device_fingerprint, 0.10, profile=profile)
 

@@ -16,6 +16,25 @@ from app.core.rate_limit import limiter
 limiter.enabled = False
 
 
+# The history lookups have their own tests (test_login_history.py). Here the fake database answers
+# queries in a fixed order, so the lookups are stubbed: no history, and no challenged-login context.
+_history_patches = []
+
+
+def setUpModule():
+    from unittest.mock import AsyncMock, patch
+    from app.services import login_history
+    for name in ("lookup_history", "latest_challenge_columns"):
+        stub = patch.object(login_history, name, new=AsyncMock(return_value=None))
+        stub.start()
+        _history_patches.append(stub)
+
+
+def tearDownModule():
+    while _history_patches:
+        _history_patches.pop().stop()
+
+
 
 class Result:
     def __init__(self, value):
@@ -159,6 +178,27 @@ class GoogleAuthTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(db.commits, 1)
         self.assertEqual(next(x for x in db.added if isinstance(x, UserDeviceProfile)).trust_state,
                          "PROBATIONARY")
+
+    async def test_family_registration_records_login_context(self):
+        from app.models.entities import ContextualLogin
+        db = FakeDb(None)
+        payload = GoogleAuthRequest(id_token="id", role="family", device_fingerprint="device-1",
+                                    raw_features={"device_brand": "samsung", "device_model": "SM-A145F",
+                                                  "os_name": "Android", "os_version": "15"})
+        request = http_request({"CF-Connecting-IP": "41.90.1.1", "CF-IPCountry": "KE"})
+        with patch.object(auth.settings, "GOOGLE_CLIENT_IDS", "client-id"), \
+             patch.object(auth, "run_in_threadpool", new=AsyncMock(return_value={
+                 "aud": "client-id", "email_verified": True,
+                 "email": "member@example.com", "name": "Member", "sub": "google-sub",
+             })):
+            await auth.register_family(payload, db, request)
+        login = next(x for x in db.added if isinstance(x, ContextualLogin))
+        self.assertTrue(login.is_successful)
+        self.assertEqual(login.country, "KE")
+        self.assertEqual(login.ip_address, "41.90.1.1")
+        self.assertEqual(login.os_family, "Android")
+        self.assertEqual(login.device_type, "mobile")
+        self.assertEqual(login.user_agent, "MzaziCare (samsung SM-A145F; Android 15)")
 
     async def test_verified_caregiver_completion_creates_approved_session(self):
         db = FakeDb()

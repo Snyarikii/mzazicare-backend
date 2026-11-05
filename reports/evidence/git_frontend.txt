@@ -17,39 +17,20 @@ origin	https://github.com/Snyarikii/mzazicare-mobile.git (push)
   remotes/origin/main
 == tags ==
 v0.1.0-ui-prototype
+v0.3.0-sprint3
 == status (summary) ==
 ## main...origin/main
- M App.js
- M apiResponse.test.cjs
- M app.config.js
- M app.json
- M devSessionTools.test.cjs
- M logoutRevocation.test.cjs
- M package-lock.json
- M package.json
- M passiveLock.test.cjs
- M patientPrivacy.test.cjs
- M profileSecurity.test.cjs
- M src/components/DevSessionTools.js
  M src/config/api.js
- M src/constants/theme.js
- M src/context/AuthContext.js
  M src/screens/auth/LoginScreen.js
- M src/screens/caregiver/CareLogs.js
- M src/screens/caregiver/CaregiverDashboardScreen.js
- M src/screens/profile/ProfileScreen.js
- M src/services/telemetry.js
 ?? .vscode/
-?? demoTools.test.cjs
-?? eas.json
-?? offlineBanner.test.cjs
-?? splashGate.test.cjs
-?? src/components/OfflineBanner.js
-?? src/config/demoTools.js
-?? src/services/splashGate.js
+?? simulationHeaders.test.cjs
 == commit count ==
-21
+25
 == log (hash|date|subject) ==
+b589301|2026-11-05|fix(session): app lock, telemetry and caregiver screen updates
+968e614|2026-11-05|feat(demo): risk simulation tools in preview builds
+86108a5|2026-11-05|feat(ui): offline banner, splash gating and theme-aware security settings
+92ea959|2026-11-05|build(mobile): EAS build profiles, update channel and production API
 57d2351|2026-11-03|feat(security/ui): replace custom PIN with native device auth and add Security & Privacy settings
 8c75724|2026-10-27|feat(security/ui): integrate 3-tier risk engine, biometrics, dual session lock, and UI fixes
 a131140|2026-10-23|feat(auth): add caregiver license verification and opt-out cancellation - Integrate 'Verify Professional License' step into caregiver onboarding flow. - Defer user creation by retaining temporary Google profile claims in local state prior to license submission. - Implement clean cancellation handler (handleCancelRegistration) to revoke Google session via GoogleSignin.signOut(), purge in-memory state, and reset navigation stack to RoleSelection. - Add inline validation error handling for 400 (invalid license) and 403 (name mismatch) responses.

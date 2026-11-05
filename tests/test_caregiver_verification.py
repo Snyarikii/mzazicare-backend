@@ -101,6 +101,25 @@ class CaregiverVerificationTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(create.await_args.kwargs["role"], "caregiver")
         self.assertEqual(create.await_args.kwargs["license_number"], "CG-2026-001")
 
+    async def test_new_registration_records_login_context(self):
+        from fastapi import Request
+        self.db.execute.side_effect = [
+            MagicMock(scalar_one_or_none=MagicMock(return_value=None)),
+            MagicMock(scalar_one_or_none=MagicMock(return_value=SimpleNamespace(full_name="Stephen Nyariki"))),
+        ]
+        request = Request({"type": "http", "headers": [(b"cf-ipcountry", b"KE"), (b"cf-connecting-ip", b"41.90.1.1")]})
+        with patch.object(caregiver, "verify_google_id_token", new=AsyncMock(
+            return_value=("stephen@example.com", "Stephen Nyariki", "google-sub")
+        )), patch.object(caregiver, "create_google_account", new=AsyncMock(return_value="session")) as create:
+            await verify_license(LicenseVerificationRequest(
+                google_id_token="valid-token", license_number="CG-2026-001", device_fingerprint="device-1",
+                raw_features={"device_brand": "samsung", "device_model": "SM-A145F", "os_name": "Android"},
+            ), self.db, request)
+        context = create.await_args.kwargs["context"]
+        self.assertEqual(context["country"], "KE")
+        self.assertEqual(context["ip"], "41.90.1.1")
+        self.assertEqual(context["os_family"], "Android")
+
     async def test_new_registration_name_mismatch_does_not_write_user(self):
         self.db.execute.side_effect = [
             MagicMock(scalar_one_or_none=MagicMock(return_value=None)),

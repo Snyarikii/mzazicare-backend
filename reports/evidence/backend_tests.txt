@@ -42,6 +42,14 @@ only_after_name_match) ... ok
 test_new_registration_name_mismatch_does_not_write_user (test_caregiver_ve
 rification.CaregiverVerificationTests.test_new_registration_name_mismatch_
 does_not_write_user) ... ok
+test_new_registration_records_login_context (test_caregiver_verification.C
+aregiverVerificationTests.test_new_registration_records_login_context) 
+... Executing <Task finished name='Task-56' coro=<CaregiverVerificationTes
+ts.test_new_registration_records_login_context() done, defined at 
+C:\mzazicare-backend\tests\test_caregiver_verification.py:104> 
+result=None created at C:\Users\nyari\AppData\Local\Programs\Python\Python
+313\Lib\asyncio\runners.py:100> took 3.765 seconds
+ok
 test_new_registration_rejects_invalid_license_without_writing (test_caregi
 ver_verification.CaregiverVerificationTests.test_new_registration_rejects_
 invalid_license_without_writing) ... ok
@@ -78,7 +86,7 @@ ests.test_denied_biometric_unlock_revokes_refresh) ... ok
 test_denied_google_login_issues_no_tokens_or_challenge (test_google_auth.G
 oogleAuthTests.test_denied_google_login_issues_no_tokens_or_challenge) 
 ... ok
-­ƒºá [Risk Engine] Loaded trained RBA model from: C:\mzazicare-backend\app\services\..\ml\adaptive_risk_model.joblib
+­ƒºá [Risk Engine] Loaded trained RBA model (version 2) from: C:\mzazicare-backend\app\services\..\ml\adaptive_risk_model.joblib
 
 ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼  EXACT MODEL INPUT VECTOR ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼ 
   ÔÇó raw local_hour     : 10 (derived: sin=0.5000, cos=-0.8660)
@@ -90,22 +98,22 @@ oogleAuthTests.test_denied_google_login_issues_no_tokens_or_challenge)
 
 ­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì  MODEL DIAGNOSTICS ­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì 
 Model Classes: [0 1]
-Raw Probabilities Array: [0.82024725 0.17975275]
+Raw Probabilities Array: [0.99814197 0.00185803]
 ============================================================
 
 test_dormant_header_challenges_without_mutating_saved_profile (test_google
 _auth.GoogleAuthTests.test_dormant_header_challenges_without_mutating_save
-d_profile) ... C:\mzazicare-backend\app\services\risk_engine.py:252: 
+d_profile) ... C:\mzazicare-backend\app\services\risk_engine.py:339: 
 DeprecationWarning: datetime.datetime.utcnow() is deprecated and 
 scheduled for removal in a future version. Use timezone-aware objects to 
 represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
   days_inactive = (datetime.utcnow() - device_profile.last_login_at).days 
 if device_profile.last_login_at else 0
-Executing <Task finished name='Task-111' coro=<GoogleAuthTests.test_dorman
+Executing <Task finished name='Task-116' coro=<GoogleAuthTests.test_dorman
 t_header_challenges_without_mutating_saved_profile() done, defined at 
-C:\mzazicare-backend\tests\test_google_auth.py:303> result=None created 
+C:\mzazicare-backend\tests\test_google_auth.py:343> result=None created 
 at C:\Users\nyari\AppData\Local\Programs\Python\Python313\Lib\asyncio\runn
-ers.py:100> took 0.222 seconds
+ers.py:100> took 0.144 seconds
 ok
 
 ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼  EXACT MODEL INPUT VECTOR ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼ ­ƒö¼ 
@@ -118,25 +126,22 @@ ok
 
 ­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì  MODEL DIAGNOSTICS ­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì 
 Model Classes: [0 1]
-Raw Probabilities Array: [0.82024725 0.17975275]
+Raw Probabilities Array: [0.99814197 0.00185803]
 ============================================================
 
 test_dormant_header_on_biometric_unlock_requires_mfa (test_google_auth.Goo
 gleAuthTests.test_dormant_header_on_biometric_unlock_requires_mfa) ... 
-C:\mzazicare-backend\app\services\risk_engine.py:252: DeprecationWarning: 
+C:\mzazicare-backend\app\services\risk_engine.py:339: DeprecationWarning: 
 datetime.datetime.utcnow() is deprecated and scheduled for removal in a 
 future version. Use timezone-aware objects to represent datetimes in UTC: 
 datetime.datetime.now(datetime.UTC).
   days_inactive = (datetime.utcnow() - device_profile.last_login_at).days 
 if device_profile.last_login_at else 0
-Executing <Task finished name='Task-116' coro=<GoogleAuthTests.test_dorman
-t_header_on_biometric_unlock_requires_mfa() done, defined at 
-C:\mzazicare-backend\tests\test_google_auth.py:390> result=None created 
-at C:\Users\nyari\AppData\Local\Programs\Python\Python313\Lib\asyncio\runn
-ers.py:100> took 0.144 seconds
 ok
 test_family_completion_creates_device_bound_session (test_google_auth.Goog
 leAuthTests.test_family_completion_creates_device_bound_session) ... ok
+test_family_registration_records_login_context (test_google_auth.GoogleAut
+hTests.test_family_registration_records_login_context) ... ok
 test_first_admin_google_login_creates_admin_with_long_android_os_name (tes
 t_google_auth.GoogleAuthTests.test_first_admin_google_login_creates_admin_
 with_long_android_os_name) ... ok
@@ -174,20 +179,120 @@ test_registration_requires_role
 
 ­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì  MODEL DIAGNOSTICS ­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì ­ƒöì 
 Model Classes: [0 1]
-Raw Probabilities Array: [0.82024725 0.17975275]
+Raw Probabilities Array: [0.99814197 0.00185803]
 ============================================================
 
 test_simulated_ip_header_denies_without_using_forwarded_fallback (test_goo
 gle_auth.GoogleAuthTests.test_simulated_ip_header_denies_without_using_for
-warded_fallback) ... Executing <Task finished name='Task-171' coro=<Google
-AuthTests.test_simulated_ip_header_denies_without_using_forwarded_fallback
-() done, defined at C:\mzazicare-backend\tests\test_google_auth.py:258> 
-result=None created at C:\Users\nyari\AppData\Local\Programs\Python\Python
-313\Lib\asyncio\runners.py:100> took 0.126 seconds
-ok
+warded_fallback) ... ok
 test_verified_caregiver_completion_creates_approved_session (test_google_a
 uth.GoogleAuthTests.test_verified_caregiver_completion_creates_approved_se
 ssion) ... ok
+test_missing_table_disables_network_history (test_login_history.AsnLookupT
+ests.test_missing_table_disables_network_history) ... ASN table not found 
+at /nonexistent/asn.tsv.gz; network history disabled
+ok
+test_ranges_for_ipv4_and_ipv6_and_unrouted_space (test_login_history.AsnLo
+okupTests.test_ranges_for_ipv4_and_ipv6_and_unrouted_space) ... ok
+test_challenged_login_context_is_recovered (test_login_history.DatabaseQue
+ryTests.test_challenged_login_context_is_recovered) ... ok
+test_history_counts_only_successful_logins (test_login_history.DatabaseQue
+ryTests.test_history_counts_only_successful_logins) ... ok
+test_lookup_failure_returns_no_history (test_login_history.DatabaseQueryTe
+sts.test_lookup_failure_returns_no_history) ... Login history unavailable 
+(database unavailable); scoring without history
+ok
+test_unknown_user_is_a_first_login (test_login_history.DatabaseQueryTests.
+test_unknown_user_is_a_first_login) ... ok
+test_familiar_login_has_no_novelty 
+(test_login_history.FeatureTests.test_familiar_login_has_no_novelty) ... 
+ok
+test_first_login_is_new_in_every_known_respect (test_login_history.Feature
+Tests.test_first_login_is_new_in_every_known_respect) ... ok
+test_new_country_and_network_are_flagged (test_login_history.FeatureTests.
+test_new_country_and_network_are_flagged) ... ok
+test_unknown_country_and_unrecorded_history_carry_no_information (test_log
+in_history.FeatureTests.test_unknown_country_and_unrecorded_history_carry_
+no_information) ... ok
+test_app_signature_normalises_android_build_strings (test_login_history.He
+aderTests.test_app_signature_normalises_android_build_strings) ... ok
+test_cloudflare_ip_and_country_are_preferred (test_login_history.HeaderTes
+ts.test_cloudflare_ip_and_country_are_preferred) ... ok
+test_forwarded_then_socket_address_are_fallbacks (test_login_history.Heade
+rTests.test_forwarded_then_socket_address_are_fallbacks) ... ok
+test_simulated_country_overrides_cloudflare (test_login_history.HeaderTest
+s.test_simulated_country_overrides_cloudflare) ... ok
+test_unknown_or_malformed_country_is_none (test_login_history.HeaderTests.
+test_unknown_or_malformed_country_is_none) ... ok
+test_evening_logins_are_no_longer_capped (test_login_history.VersionTwoEng
+ineTests.test_evening_logins_are_no_longer_capped) ... 
+C:\mzazicare-backend\app\services\risk_engine.py:339: DeprecationWarning: 
+datetime.datetime.utcnow() is deprecated and scheduled for removal in a 
+future version. Use timezone-aware objects to represent datetimes in UTC: 
+datetime.datetime.now(datetime.UTC).
+  days_inactive = (datetime.utcnow() - device_profile.last_login_at).days 
+if device_profile.last_login_at else 0
+ok
+test_grouped_shap_explains_six_groups_and_sums_to_the_difference (test_log
+in_history.VersionTwoEngineTests.test_grouped_shap_explains_six_groups_and
+_sums_to_the_difference) ... 
+C:\mzazicare-backend\app\services\risk_engine.py:339: DeprecationWarning: 
+datetime.datetime.utcnow() is deprecated and scheduled for removal in a 
+future version. Use timezone-aware objects to represent datetimes in UTC: 
+datetime.datetime.now(datetime.UTC).
+  days_inactive = (datetime.utcnow() - device_profile.last_login_at).days 
+if device_profile.last_login_at else 0
+ok
+test_missing_history_uses_the_routine_reference (test_login_history.Versio
+nTwoEngineTests.test_missing_history_uses_the_routine_reference) ... 
+C:\mzazicare-backend\app\services\risk_engine.py:339: DeprecationWarning: 
+datetime.datetime.utcnow() is deprecated and scheduled for removal in a 
+future version. Use timezone-aware objects to represent datetimes in UTC: 
+datetime.datetime.now(datetime.UTC).
+  days_inactive = (datetime.utcnow() - device_profile.last_login_at).days 
+if device_profile.last_login_at else 0
+ok
+test_new_country_on_trusted_device_is_challenged_for_established_accounts 
+(test_login_history.VersionTwoEngineTests.test_new_country_on_trusted_devi
+ce_is_challenged_for_established_accounts) ... 
+C:\mzazicare-backend\app\services\risk_engine.py:339: DeprecationWarning: 
+datetime.datetime.utcnow() is deprecated and scheduled for removal in a 
+future version. Use timezone-aware objects to represent datetimes in UTC: 
+datetime.datetime.now(datetime.UTC).
+  days_inactive = (datetime.utcnow() - device_profile.last_login_at).days 
+if device_profile.last_login_at else 0
+ok
+test_new_country_raises_risk_and_is_explained (test_login_history.VersionT
+woEngineTests.test_new_country_raises_risk_and_is_explained) ... 
+C:\mzazicare-backend\app\services\risk_engine.py:339: DeprecationWarning: 
+datetime.datetime.utcnow() is deprecated and scheduled for removal in a 
+future version. Use timezone-aware objects to represent datetimes in UTC: 
+datetime.datetime.now(datetime.UTC).
+  days_inactive = (datetime.utcnow() - device_profile.last_login_at).days 
+if device_profile.last_login_at else 0
+C:\mzazicare-backend\app\services\risk_engine.py:339: DeprecationWarning: 
+datetime.datetime.utcnow() is deprecated and scheduled for removal in a 
+future version. Use timezone-aware objects to represent datetimes in UTC: 
+datetime.datetime.now(datetime.UTC).
+  days_inactive = (datetime.utcnow() - device_profile.last_login_at).days 
+if device_profile.last_login_at else 0
+ok
+test_new_country_rule_skips_young_accounts_and_familiar_countries (test_lo
+gin_history.VersionTwoEngineTests.test_new_country_rule_skips_young_accoun
+ts_and_familiar_countries) ... 
+C:\mzazicare-backend\app\services\risk_engine.py:339: DeprecationWarning: 
+datetime.datetime.utcnow() is deprecated and scheduled for removal in a 
+future version. Use timezone-aware objects to represent datetimes in UTC: 
+datetime.datetime.now(datetime.UTC).
+  days_inactive = (datetime.utcnow() - device_profile.last_login_at).days 
+if device_profile.last_login_at else 0
+C:\mzazicare-backend\app\services\risk_engine.py:339: DeprecationWarning: 
+datetime.datetime.utcnow() is deprecated and scheduled for removal in a 
+future version. Use timezone-aware objects to represent datetimes in UTC: 
+datetime.datetime.now(datetime.UTC).
+  days_inactive = (datetime.utcnow() - device_profile.last_login_at).days 
+if device_profile.last_login_at else 0
+ok
 test_database_stores_tokens_and_models_return_plain_values (test_phi_encry
 ption.PhiEncryptionTests.test_database_stores_tokens_and_models_return_pla
 in_values) ... C:\mzazicare-backend\venv\Lib\site-packages\sqlalchemy\sql\
@@ -213,50 +318,50 @@ PhiEncryptionTests.test_plaintext_fallback_does_not_mask_corrupt_tokens)
 test_upgrade_and_downgrade_existing_plaintext (test_phi_migration_postgres
 .PhiMigrationPostgresTests.test_upgrade_and_downgrade_existing_plaintext) 
 ... skipped 'requires opt-in PostgreSQL'
-2026-11-05T04:45:52.758927Z [warning  ] http_request                   client_ip=testclient duration_ms=18.01 method=POST path=/api/v1/auth/google status_code=401 user_id=None
-2026-11-05T04:45:52.766220Z [warning  ] http_request                   client_ip=testclient duration_ms=1.69 method=POST path=/api/v1/auth/google status_code=401 user_id=None
-2026-11-05T04:45:52.771986Z [warning  ] http_request                   client_ip=testclient duration_ms=1.1 method=POST path=/api/v1/auth/google status_code=401 user_id=None
-2026-11-05T04:45:52.778208Z [warning  ] http_request                   client_ip=testclient duration_ms=1.42 method=POST path=/api/v1/auth/google status_code=401 user_id=None
-2026-11-05T04:45:52.784228Z [warning  ] http_request                   client_ip=testclient duration_ms=0.88 method=POST path=/api/v1/auth/google status_code=401 user_id=None
-2026-11-05T04:45:52.791492Z [warning  ] http_request                   client_ip=testclient duration_ms=2.34 method=POST path=/api/v1/auth/google status_code=429 user_id=None
-2026-11-05T04:45:52.799634Z [warning  ] http_request                   client_ip=testclient duration_ms=2.76 method=POST path=/api/v1/auth/google status_code=429 user_id=None
+2026-11-05T13:32:07.460686Z [warning  ] http_request                   client_ip=testclient duration_ms=10.32 method=POST path=/api/v1/auth/google status_code=401 user_id=None
+2026-11-05T13:32:07.464872Z [warning  ] http_request                   client_ip=testclient duration_ms=0.92 method=POST path=/api/v1/auth/google status_code=401 user_id=None
+2026-11-05T13:32:07.468247Z [warning  ] http_request                   client_ip=testclient duration_ms=0.62 method=POST path=/api/v1/auth/google status_code=401 user_id=None
+2026-11-05T13:32:07.471975Z [warning  ] http_request                   client_ip=testclient duration_ms=0.84 method=POST path=/api/v1/auth/google status_code=401 user_id=None
+2026-11-05T13:32:07.474785Z [warning  ] http_request                   client_ip=testclient duration_ms=0.47 method=POST path=/api/v1/auth/google status_code=401 user_id=None
+2026-11-05T13:32:07.478028Z [warning  ] http_request                   client_ip=testclient duration_ms=1.06 method=POST path=/api/v1/auth/google status_code=429 user_id=None
+2026-11-05T13:32:07.481080Z [warning  ] http_request                   client_ip=testclient duration_ms=0.95 method=POST path=/api/v1/auth/google status_code=429 user_id=None
 test_google_sign_in_allows_five_per_minute (test_rate_limits.RateLimitTest
 s.test_google_sign_in_allows_five_per_minute) ... ok
-2026-11-05T04:45:52.807972Z [warning  ] http_request                   client_ip=testclient duration_ms=3.16 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
-2026-11-05T04:45:52.813854Z [warning  ] http_request                   client_ip=testclient duration_ms=0.95 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
-2026-11-05T04:45:52.819039Z [warning  ] http_request                   client_ip=testclient duration_ms=0.85 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
-2026-11-05T04:45:52.826255Z [warning  ] http_request                   client_ip=testclient duration_ms=1.31 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
-2026-11-05T04:45:52.831541Z [warning  ] http_request                   client_ip=testclient duration_ms=0.95 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
-2026-11-05T04:45:52.837600Z [warning  ] http_request                   client_ip=testclient duration_ms=1.3 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
-2026-11-05T04:45:52.843661Z [warning  ] http_request                   client_ip=testclient duration_ms=1.33 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
-2026-11-05T04:45:52.849069Z [warning  ] http_request                   client_ip=testclient duration_ms=0.86 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
-2026-11-05T04:45:52.855290Z [warning  ] http_request                   client_ip=testclient duration_ms=1.32 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
-2026-11-05T04:45:52.860844Z [warning  ] http_request                   client_ip=testclient duration_ms=1.01 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
-2026-11-05T04:45:52.866141Z [warning  ] http_request                   client_ip=testclient duration_ms=0.91 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
-2026-11-05T04:45:52.872434Z [warning  ] http_request                   client_ip=testclient duration_ms=1.43 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
-2026-11-05T04:45:52.878023Z [warning  ] http_request                   client_ip=testclient duration_ms=0.92 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
-2026-11-05T04:45:52.883473Z [warning  ] http_request                   client_ip=testclient duration_ms=0.87 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
-2026-11-05T04:45:52.889830Z [warning  ] http_request                   client_ip=testclient duration_ms=1.42 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
-2026-11-05T04:45:52.895360Z [warning  ] http_request                   client_ip=testclient duration_ms=0.85 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
-2026-11-05T04:45:52.900900Z [warning  ] http_request                   client_ip=testclient duration_ms=1.32 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
-2026-11-05T04:45:52.906743Z [warning  ] http_request                   client_ip=testclient duration_ms=1.4 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
-2026-11-05T04:45:52.912189Z [warning  ] http_request                   client_ip=testclient duration_ms=0.97 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
-2026-11-05T04:45:52.918952Z [warning  ] http_request                   client_ip=testclient duration_ms=1.41 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
-2026-11-05T04:45:52.925581Z [warning  ] http_request                   client_ip=testclient duration_ms=1.99 method=POST path=/api/v1/auth/refresh status_code=429 user_id=None
+2026-11-05T13:32:07.485175Z [warning  ] http_request                   client_ip=testclient duration_ms=1.59 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
+2026-11-05T13:32:07.488807Z [warning  ] http_request                   client_ip=testclient duration_ms=0.79 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
+2026-11-05T13:32:07.491455Z [warning  ] http_request                   client_ip=testclient duration_ms=0.52 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
+2026-11-05T13:32:07.494144Z [warning  ] http_request                   client_ip=testclient duration_ms=0.43 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
+2026-11-05T13:32:07.496720Z [warning  ] http_request                   client_ip=testclient duration_ms=0.42 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
+2026-11-05T13:32:07.499213Z [warning  ] http_request                   client_ip=testclient duration_ms=0.41 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
+2026-11-05T13:32:07.502870Z [warning  ] http_request                   client_ip=testclient duration_ms=0.93 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
+2026-11-05T13:32:07.506296Z [warning  ] http_request                   client_ip=testclient duration_ms=0.57 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
+2026-11-05T13:32:07.509104Z [warning  ] http_request                   client_ip=testclient duration_ms=0.51 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
+2026-11-05T13:32:07.511713Z [warning  ] http_request                   client_ip=testclient duration_ms=0.44 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
+2026-11-05T13:32:07.514272Z [warning  ] http_request                   client_ip=testclient duration_ms=0.52 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
+2026-11-05T13:32:07.516810Z [warning  ] http_request                   client_ip=testclient duration_ms=0.47 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
+2026-11-05T13:32:07.520812Z [warning  ] http_request                   client_ip=testclient duration_ms=1.01 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
+2026-11-05T13:32:07.523743Z [warning  ] http_request                   client_ip=testclient duration_ms=0.46 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
+2026-11-05T13:32:07.526190Z [warning  ] http_request                   client_ip=testclient duration_ms=0.41 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
+2026-11-05T13:32:07.528578Z [warning  ] http_request                   client_ip=testclient duration_ms=0.41 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
+2026-11-05T13:32:07.531276Z [warning  ] http_request                   client_ip=testclient duration_ms=0.42 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
+2026-11-05T13:32:07.534231Z [warning  ] http_request                   client_ip=testclient duration_ms=0.49 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
+2026-11-05T13:32:07.538775Z [warning  ] http_request                   client_ip=testclient duration_ms=1.24 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
+2026-11-05T13:32:07.541741Z [warning  ] http_request                   client_ip=testclient duration_ms=0.52 method=POST path=/api/v1/auth/refresh status_code=401 user_id=None
+2026-11-05T13:32:07.544972Z [warning  ] http_request                   client_ip=testclient duration_ms=0.93 method=POST path=/api/v1/auth/refresh status_code=429 user_id=None
 test_refresh_allows_twenty_per_minute 
 (test_rate_limits.RateLimitTests.test_refresh_allows_twenty_per_minute) 
 ... ok
-2026-11-05T04:45:52.935195Z [warning  ] http_request                   client_ip=testclient duration_ms=4.1 method=POST path=/api/v1/auth/revoke-all-sessions status_code=409 user_id=None
-2026-11-05T04:45:52.943789Z [warning  ] http_request                   client_ip=testclient duration_ms=3.62 method=POST path=/api/v1/auth/revoke-all-sessions status_code=409 user_id=None
-2026-11-05T04:45:52.950943Z [warning  ] http_request                   client_ip=testclient duration_ms=2.42 method=POST path=/api/v1/auth/revoke-all-sessions status_code=409 user_id=None
-2026-11-05T04:45:52.958116Z [warning  ] http_request                   client_ip=testclient duration_ms=2.6 method=POST path=/api/v1/auth/revoke-all-sessions status_code=409 user_id=None
-2026-11-05T04:45:52.965497Z [warning  ] http_request                   client_ip=testclient duration_ms=2.81 method=POST path=/api/v1/auth/revoke-all-sessions status_code=409 user_id=None
-2026-11-05T04:45:52.972321Z [warning  ] http_request                   client_ip=testclient duration_ms=2.32 method=POST path=/api/v1/auth/revoke-all-sessions status_code=409 user_id=None
-2026-11-05T04:45:52.979713Z [warning  ] http_request                   client_ip=testclient duration_ms=2.31 method=POST path=/api/v1/auth/revoke-all-sessions status_code=409 user_id=None
-2026-11-05T04:45:52.986822Z [warning  ] http_request                   client_ip=testclient duration_ms=2.26 method=POST path=/api/v1/auth/revoke-all-sessions status_code=409 user_id=None
-2026-11-05T04:45:52.994790Z [warning  ] http_request                   client_ip=testclient duration_ms=2.83 method=POST path=/api/v1/auth/revoke-all-sessions status_code=409 user_id=None
-2026-11-05T04:45:53.001727Z [warning  ] http_request                   client_ip=testclient duration_ms=2.34 method=POST path=/api/v1/auth/revoke-all-sessions status_code=409 user_id=None
-2026-11-05T04:45:53.011619Z [warning  ] http_request                   client_ip=testclient duration_ms=3.27 method=POST path=/api/v1/auth/revoke-all-sessions status_code=429 user_id=None
+2026-11-05T13:32:07.549454Z [warning  ] http_request                   client_ip=testclient duration_ms=2.0 method=POST path=/api/v1/auth/revoke-all-sessions status_code=409 user_id=None
+2026-11-05T13:32:07.555504Z [warning  ] http_request                   client_ip=testclient duration_ms=1.9 method=POST path=/api/v1/auth/revoke-all-sessions status_code=409 user_id=None
+2026-11-05T13:32:07.559206Z [warning  ] http_request                   client_ip=testclient duration_ms=1.18 method=POST path=/api/v1/auth/revoke-all-sessions status_code=409 user_id=None
+2026-11-05T13:32:07.562577Z [warning  ] http_request                   client_ip=testclient duration_ms=1.15 method=POST path=/api/v1/auth/revoke-all-sessions status_code=409 user_id=None
+2026-11-05T13:32:07.565898Z [warning  ] http_request                   client_ip=testclient duration_ms=1.08 method=POST path=/api/v1/auth/revoke-all-sessions status_code=409 user_id=None
+2026-11-05T13:32:07.570413Z [warning  ] http_request                   client_ip=testclient duration_ms=2.01 method=POST path=/api/v1/auth/revoke-all-sessions status_code=409 user_id=None
+2026-11-05T13:32:07.574393Z [warning  ] http_request                   client_ip=testclient duration_ms=1.27 method=POST path=/api/v1/auth/revoke-all-sessions status_code=409 user_id=None
+2026-11-05T13:32:07.577821Z [warning  ] http_request                   client_ip=testclient duration_ms=1.25 method=POST path=/api/v1/auth/revoke-all-sessions status_code=409 user_id=None
+2026-11-05T13:32:07.581178Z [warning  ] http_request                   client_ip=testclient duration_ms=1.17 method=POST path=/api/v1/auth/revoke-all-sessions status_code=409 user_id=None
+2026-11-05T13:32:07.585203Z [warning  ] http_request                   client_ip=testclient duration_ms=1.92 method=POST path=/api/v1/auth/revoke-all-sessions status_code=409 user_id=None
+2026-11-05T13:32:07.589563Z [warning  ] http_request                   client_ip=testclient duration_ms=1.53 method=POST path=/api/v1/auth/revoke-all-sessions status_code=429 user_id=None
 test_revoke_all_sessions_allows_ten_per_minute (test_rate_limits.RateLimit
 Tests.test_revoke_all_sessions_allows_ten_per_minute) ... ok
 test_refresh_rejects_blacklisted_token (test_refresh_auth.RefreshAuthTests
@@ -284,7 +389,13 @@ estLoggingTests.test_unhandled_exception_is_logged_as_500_error) ... ok
 test_action_threshold_boundaries (test_risk_engine.RiskEngineDecisionTests
 .test_action_threshold_boundaries) ... ok
 test_all_blacklisted_ips_and_explicit_flag_deny (test_risk_engine.RiskEngi
-neDecisionTests.test_all_blacklisted_ips_and_explicit_flag_deny) ... ok
+neDecisionTests.test_all_blacklisted_ips_and_explicit_flag_deny) ... C:\Us
+ers\nyari\AppData\Local\Programs\Python\Python313\Lib\threading.py:919: 
+ResourceWarning: unclosed database in <sqlite3.Connection object at 
+0x000001D6D8404220>
+  self._handle = _ThreadHandle()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
 test_dormant_trusted_device_requires_mfa (test_risk_engine.RiskEngineDecis
 ionTests.test_dormant_trusted_device_requires_mfa) ... 
 C:\mzazicare-backend\tests\test_risk_engine.py:74: DeprecationWarning: 
@@ -292,7 +403,7 @@ datetime.datetime.utcnow() is deprecated and scheduled for removal in a
 future version. Use timezone-aware objects to represent datetimes in UTC: 
 datetime.datetime.now(datetime.UTC).
   last_login_at=datetime.utcnow() - timedelta(days=45))
-C:\mzazicare-backend\app\services\risk_engine.py:252: DeprecationWarning: 
+C:\mzazicare-backend\app\services\risk_engine.py:339: DeprecationWarning: 
 datetime.datetime.utcnow() is deprecated and scheduled for removal in a 
 future version. Use timezone-aware objects to represent datetimes in UTC: 
 datetime.datetime.now(datetime.UTC).
@@ -308,13 +419,7 @@ represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
   last_login_at=datetime.utcnow() - timedelta(days=45))
 ok
 test_model_loads_and_four_decision_tiers (test_risk_engine.RiskEngineDecis
-ionTests.test_model_loads_and_four_decision_tiers) ... C:\Users\nyari\AppD
-ata\Local\Programs\Python\Python313\Lib\multiprocessing\pool.py:747: 
-ResourceWarning: unclosed database in <sqlite3.Connection object at 
-0x000001A957824220>
-  def __init__(self, pool, callback, error_callback):
-ResourceWarning: Enable tracemalloc to get the object allocation traceback
-ok
+ionTests.test_model_loads_and_four_decision_tiers) ... ok
 test_virtual_device_is_denied 
 (test_risk_engine.RiskEngineDecisionTests.test_virtual_device_is_denied) 
 ... ok
@@ -347,7 +452,7 @@ test_session_rotation_revokes_previous_device_token (test_token_revocation
  ... ok
 
 ----------------------------------------------------------------------
-Ran 73 tests in 11.051s
+Ran 96 tests in 9.856s
 
 OK (skipped=1)
 EXIT CODE: 0

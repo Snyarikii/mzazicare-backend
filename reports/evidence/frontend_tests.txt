@@ -1,51 +1,54 @@
 ﻿API response parsing passed.
-Ô£ö apiResponse.test.cjs (2013.8434ms)
+Ô£ö apiResponse.test.cjs (1995.6643ms)
 Authentication navigation passed.
-Ô£ö authRecovery.test.cjs (2050.3856ms)
+Ô£ö authRecovery.test.cjs (1978.8359ms)
 Session storage cleanup passed.
 Security preference storage passed.
-Ô£ö authStorage.test.cjs (1789.9473ms)
-Ô£ö demo tools are on in development (958.3092ms)
-Ô£ö standalone builds show demo tools only when enabled (203.4106ms)
+Ô£ö authStorage.test.cjs (1947.5238ms)
+Ô£ö demo tools are on in development (1121.7301ms)
+Ô£ö standalone builds show demo tools only when enabled (104.2924ms)
 Developer heartbeat routing passed.
-Ô£ö devSessionTools.test.cjs (2282.1179ms)
-Ô£ö native session lock keeps tokens and resumes the signed-in user after unlock (8.6473ms)
-Ô£ö UI logout revokes the refresh-backed access token before clearing local tokens (7.1805ms)
-Ô£ö UI logout still clears local tokens when the backend request fails (1.7055ms)
-Ô£ö UI logout clears local tokens when Google sign-out fails (1.641ms)
-Ô£ö UI logout clears local tokens even when reading the cached session fails (1.4676ms)
-Ô£ö API client sends logout with the access JWT and refresh token body (53.0025ms)
-Ô£ö clearTokens deletes both secure-store JWT entries (36.8439ms)
-Ô£ö hidden while online or while NetInfo is still checking (4.8496ms)
-Ô£ö shown when the device is disconnected (0.9503ms)
-Ô£ö shown when connected to a network without internet access (0.6691ms)
-Ô£ö amber overlay below the status bar that does not block touches (1.6161ms)
-Ô£ö background transition locks locally and covers patient content until native unlock (23.7529ms)
-Ô£ö root touch boundary forwards activity and observes the Login route (50.6755ms)
-Ô£ö activity resets the three-minute timer and idle expiry locks the session (4.3744ms)
-Ô£ö an older app binary without ExpoScreenCapture still locks without loading the native package (5.2047ms)
-Ô£ö stored auto-lock preference drives the inactivity timer (2.289ms)
-Ô£ö changing the auto-lock window persists it and restarts the countdown (2.7722ms)
-Ô£ö privacy mask toggle persists through secure storage (1.3978ms)
-Ô£ö startup reports security preferences and biometric capability to the splash gate (4.3566ms)
-Ô£ö a failing biometric check still releases the splash screen (2.8012ms)
+Ô£ö devSessionTools.test.cjs (2061.2847ms)
+Ô£ö native session lock keeps tokens and resumes the signed-in user after unlock (5.6874ms)
+Ô£ö UI logout revokes the refresh-backed access token before clearing local tokens (6.0648ms)
+Ô£ö UI logout still clears local tokens when the backend request fails (1.3797ms)
+Ô£ö UI logout clears local tokens when Google sign-out fails (1.4275ms)
+Ô£ö UI logout clears local tokens even when reading the cached session fails (0.9274ms)
+Ô£ö API client sends logout with the access JWT and refresh token body (42.2408ms)
+Ô£ö clearTokens deletes both secure-store JWT entries (29.8401ms)
+Ô£ö hidden while online or while NetInfo is still checking (4.2491ms)
+Ô£ö shown when the device is disconnected (0.7589ms)
+Ô£ö shown when connected to a network without internet access (0.5338ms)
+Ô£ö amber overlay below the status bar that does not block touches (0.4355ms)
+Ô£ö background transition locks locally and covers patient content until native unlock (20.0745ms)
+Ô£ö root touch boundary forwards activity and observes the Login route (55.2244ms)
+Ô£ö activity resets the three-minute timer and idle expiry locks the session (8.1639ms)
+Ô£ö an older app binary without ExpoScreenCapture still locks without loading the native package (4.1006ms)
+Ô£ö stored auto-lock preference drives the inactivity timer (1.5116ms)
+Ô£ö changing the auto-lock window persists it and restarts the countdown (2.1686ms)
+Ô£ö privacy mask toggle persists through secure storage (0.964ms)
+Ô£ö startup reports security preferences and biometric capability to the splash gate (2.8217ms)
+Ô£ö a failing biometric check still releases the splash screen (2.0379ms)
 Patient card frosted privacy bars passed.
-Ô£ö patientPrivacy.test.cjs (2485.3103ms)
-Ô£ö security section renders the mandated controls with no way to disable locking (19.8047ms)
-Ô£ö choosing a window saves it through AuthContext (6.4616ms)
-Ô£ö turning the mask off asks first; revoke confirms, calls the API and reloads sessions (3.8375ms)
-Ô£ö last-seen labels are relative for recent activity (5.051ms)
-Ô£ö security section follows light and dark mode (21.1667ms)
+Ô£ö patientPrivacy.test.cjs (2108.644ms)
+Ô£ö security section renders the mandated controls with no way to disable locking (18.9879ms)
+Ô£ö choosing a window saves it through AuthContext (7.2567ms)
+Ô£ö turning the mask off asks first; revoke confirms, calls the API and reloads sessions (4.5918ms)
+Ô£ö last-seen labels are relative for recent activity (4.5218ms)
+Ô£ö security section follows light and dark mode (24.6432ms)
 Deferred registration requests passed.
-Ô£ö registrationFlow.test.cjs (2119.4201ms)
-Ô£ö splash stays up until every startup step reports, then hides once (7.3417ms)
-Ô£ö fallback hides the splash and names the step that never reported (2.5934ms)
-Ôä╣ tests 35
+Ô£ö registrationFlow.test.cjs (1815.5226ms)
+Ô£ö new-country simulation sends X-Simulate-Country only (385.1517ms)
+Ô£ö flagged IP and normal modes send no country header (24.4405ms)
+Ô£ö no simulation headers when demo tools are off (15.9571ms)
+Ô£ö splash stays up until every startup step reports, then hides once (6.3028ms)
+Ô£ö fallback hides the splash and names the step that never reported (2.4218ms)
+Ôä╣ tests 38
 Ôä╣ suites 0
-Ôä╣ pass 35
+Ôä╣ pass 38
 Ôä╣ fail 0
 Ôä╣ cancelled 0
 Ôä╣ skipped 0
 Ôä╣ todo 0
-Ôä╣ duration_ms 3169.429
+Ôä╣ duration_ms 2865.525
 EXIT CODE: 0

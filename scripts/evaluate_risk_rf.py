@@ -228,8 +228,13 @@ def main() -> None:
     retrained = training_pipeline().fit(X_train, y_train)
     probabilities["retrained_random_forest"] = retrained.predict_proba(X_test)[:, 1]
 
-    if DEPLOYED_MODEL.is_file():
-        deployed = joblib.load(DEPLOYED_MODEL)
+    deployed = joblib.load(DEPLOYED_MODEL) if DEPLOYED_MODEL.is_file() else None
+    if isinstance(deployed, dict):
+        # The engine now serves the version 2 history model (evaluated by ml/train_risk_model_v2.py);
+        # compare against the archived version 1 model instead, if it was kept.
+        archived = ROOT / "ml" / "artifacts" / "adaptive_risk_model_v1.joblib"
+        deployed = joblib.load(archived) if archived.is_file() else None
+    if deployed is not None:
         probabilities["deployed_random_forest"] = deployed.predict_proba(X_test)[:, 1]
         agreement = float(np.mean((probabilities["deployed_random_forest"] >= 0.5) ==
                                   (probabilities["retrained_random_forest"] >= 0.5)))

@@ -84,6 +84,12 @@ class ContextualLogin(Base):
     login_time: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
     )
+    # Login context compared by the version 2 risk model with the user's earlier successful logins.
+    country: Mapped[str | None] = mapped_column(String(2), nullable=True)
+    asn: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    user_agent: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    os_family: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    device_type: Mapped[str | None] = mapped_column(String(16), nullable=True)
 
     user = relationship("User", back_populates="contextual_logins")
 

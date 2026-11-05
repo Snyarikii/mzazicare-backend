@@ -71,6 +71,26 @@ Run this from the repository root. Using `python -m uvicorn` through the project
 
 All application routes are under `/api/v1`. Protected routes require a bearer token from the authentication flow.
 
+## Risk model and login history
+
+The perimeter risk engine serves the version 2 model, which compares each sign-in with the same user's earlier successful sign-ins (new country, network, app signature, operating system or device type; number of earlier logins; hours since the last one). It is trained on account takeovers in the RBA dataset:
+
+```powershell
+python ml/train_risk_model_v2.py --label ato
+copy app\ml\adaptive_risk_model.joblib ml\artifacts\adaptive_risk_model_v1.joblib   # keep the version 1 model once
+copy ml\artifacts\adaptive_risk_model_ato.joblib app\ml\adaptive_risk_model.joblib
+```
+
+The engine also loads a version 1 model file, in which case it scores without history.
+
+At sign-in the country comes from Cloudflare's `CF-IPCountry` header and the network from the free IPtoASN table (public domain). Download it once into `app/ml` (it is git-ignored and copied into the Docker image):
+
+```powershell
+curl.exe -L -o app\ml\ip2asn-combined.tsv.gz https://iptoasn.com/data/ip2asn-combined.tsv.gz
+```
+
+Without the table the engine still runs and treats every network as unknown. Without Cloudflare (local development) the country is unknown. Unknown values never count as new. For demonstrations, the `X-Simulate-Country` header (for example `RU`) overrides the country.
+
 ## API areas
 
 | Prefix | Purpose |

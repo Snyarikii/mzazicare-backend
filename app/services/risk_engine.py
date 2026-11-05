@@ -23,21 +23,83 @@ REF_LAT = -1.3032
 REF_LNG = 36.8124
 KNOWN_MALICIOUS_IPS = {"192.0.2.1", "198.51.100.45", "203.0.113.99"}
 
+# Version 2 model: SHAP is reported per feature group, which keeps exact Shapley values cheap
+# (2^6 = 64 model calls instead of 2^13) and reads better on the admin dashboard.
+V2_GROUPS = {
+    "Device": ["device_type", "os_family"],
+    "Time Of Day": ["hour_sin", "hour_cos"],
+    "Network Speed": ["rtt_ms"],
+    "Location History": ["new_country", "new_asn"],
+    "Device History": ["new_user_agent", "new_os", "new_device_type"],
+    "Account Activity": ["first_login", "log_prior_logins", "log_hours_since_last"],
+}
+# A login from a country the account has never used forces at least a CHALLENGE once the account
+# has this many earlier successful logins, whatever the device trust (a stolen trusted phone used
+# abroad must still be verified). Brand-new accounts are exempt: every login looks "new" to them.
+NEW_COUNTRY_MIN_PRIOR_LOGINS = 3
+
+HISTORY_REASONS = {
+    "new_country": "Login from a country not seen before for this account",
+    "new_asn": "Login from a network not seen before for this account",
+    "new_user_agent": "App signature (device or OS version) not seen before for this account",
+    "new_os": "Operating system not seen before for this account",
+    "new_device_type": "Device type not seen before for this account",
+}
+
+
+def normalise_os_family(raw_features: dict) -> str:
+    """Map the app's OS and brand details to the OS families the model was trained on."""
+    os_name = str(raw_features.get("os_name", "") or raw_features.get("os_family", "")).lower()
+    brand = str(raw_features.get("device_brand", "") or "").lower()
+    if (
+        "android" in os_name
+        or "release-keys" in os_name
+        or "test-keys" in os_name
+        or brand in ["samsung", "xiaomi", "oppo", "transsion", "tecno", "infinix", "google", "huawei"]
+        or os_name.startswith("samsung/")
+    ):
+        return "Android"
+    if "ios" in os_name or "iphone" in os_name or "ipad" in os_name or brand == "apple":
+        return "iOS"
+    if "windows" in os_name:
+        return "Windows"
+    if "mac" in os_name or "darwin" in os_name:
+        return "MacOS"
+    if "linux" in os_name:
+        return "Linux"
+    return "Other"
+
 
 class AdaptiveRiskEngine:
     def __init__(self):
         self.model = None
+        self.model_version = 1
+        self.reference = None
+        self.history_features: list[str] = []
         for path in POSSIBLE_MODEL_PATHS:
             if os.path.exists(path):
                 try:
-                    self.model = joblib.load(path)
-                    print(f"🧠 [Risk Engine] Loaded trained RBA model from: {path}")
+                    self.load_artifact(joblib.load(path))
+                    print(f"🧠 [Risk Engine] Loaded trained RBA model (version {self.model_version}) from: {path}")
                     break
                 except Exception as e:
                     print(f"⚠️ [Risk Engine] Failed to load model at {path}: {e}")
 
         if not self.model:
             print("⚠️ [Risk Engine] RBA model artifact missing. Operating in baseline heuristic mode.")
+
+    def load_artifact(self, artifact) -> None:
+        """Accept the version 1 pipeline or the version 2 bundle saved by ml/train_risk_model_v2.py."""
+        if isinstance(artifact, dict) and artifact.get("version") == 2:
+            self.model = artifact["pipeline"]
+            self.model_version = 2
+            self.reference = dict(artifact["reference"])
+            self.history_features = list(artifact["history_features"])
+        else:
+            self.model = artifact
+            self.model_version = 1
+            self.reference = None
+            self.history_features = []
 
     @staticmethod
     def _haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -87,6 +149,35 @@ class AdaptiveRiskEngine:
         analysis["is_critical_threat"] = flagged
         return analysis
 
+    def _grouped_shap_attributions(self, input_data: pd.DataFrame) -> list[dict]:
+        """Exact interventional Shapley values for the six feature groups of the version 2 model.
+
+        The reference is a routine login (daytime Android on Wi-Fi from a familiar country, network
+        and device, about 20 earlier logins). Values explain the model probability before the rules.
+        """
+        groups = list(V2_GROUPS.items())
+        count = len(groups)
+        row = input_data.iloc[0]
+        batch = pd.DataFrame([
+            {column: (row[column] if mask & (1 << index) else self.reference[column])
+             for index, (_, columns) in enumerate(groups) for column in columns}
+            for mask in range(1 << count)
+        ], columns=list(input_data.columns))
+        probabilities = self.model.predict_proba(batch)[:, 1]
+        factorial = math.factorial
+        values = []
+        for index, (name, _) in enumerate(groups):
+            contribution = 0.0
+            others = [position for position in range(count) if position != index]
+            for size in range(count):
+                weight = factorial(size) * factorial(count - size - 1) / factorial(count)
+                for subset in combinations(others, size):
+                    mask = sum(1 << position for position in subset)
+                    contribution += weight * (probabilities[mask | (1 << index)] - probabilities[mask])
+            values.append({"feature": name, "impact": round(float(contribution), 4),
+                           "positive": bool(contribution > 0)})
+        return values
+
     def _model_shap_attributions(self, input_data: pd.DataFrame) -> list[dict]:
         """Exact interventional Shapley values for the five model inputs.
 
@@ -125,6 +216,7 @@ class AdaptiveRiskEngine:
             raw_features: dict, 
             ip_address: Optional[str] = None,
             device_profile: Optional[Any] = None,
+            history: Optional[dict] = None,
         ) -> dict:
         """
         Evaluates real-time perimeter telemetry and computes the Unified Trust Score (UTS).
@@ -141,26 +233,7 @@ class AdaptiveRiskEngine:
         hour_cos = np.cos(2 * np.pi * local_hour / 24.0)
 
         # 2. OS Family Normalization
-        os_name = str(raw_features.get("os_name", "") or raw_features.get("os_family", "")).lower()
-        brand = str(raw_features.get("device_brand", "") or "").lower()
-        if (
-            "android" in os_name
-            or "release-keys" in os_name
-            or "test-keys" in os_name
-            or brand in ["samsung", "xiaomi", "oppo", "transsion", "tecno", "infinix", "google", "huawei"]
-            or os_name.startswith("samsung/")            
-        ):
-            os_family = "Android"
-        elif "ios" in os_name or "iphone" in os_name or "ipad" in os_name or brand == "apple":
-            os_family = "iOS"
-        elif "windows" in os_name:
-            os_family = "Windows"
-        elif "mac" in os_name or "darwin" in os_name:
-            os_family = "macOS"
-        elif "linux"  in os_name:
-            os_family = "Linux"
-        else:
-            os_family = "Other"
+        os_family = normalise_os_family(raw_features)
 
         # 3. Network & RTT Approximation
         network_type = str(raw_features.get("network_type", "UNKNOWN")).upper()
@@ -190,13 +263,26 @@ class AdaptiveRiskEngine:
             dist_km = 0.0
 
         # 6. ML Model Inference
-        input_data = pd.DataFrame([{
+        model_row = {
             "device_type": "mobile",
             "os_family": os_family,
             "hour_sin": hour_sin,
             "hour_cos": hour_cos,
             "rtt_ms": estimated_rtt,
-        }])
+        }
+        if self.model_version == 2:
+            # Without history (lookup failed or unavailable) use the routine-login reference values,
+            # so a missing history neither raises nor lowers the risk.
+            source = history if history else self.reference
+            for feature in self.history_features:
+                model_row[feature] = float(source.get(feature, self.reference[feature]))
+            if history:
+                if history.get("first_login"):
+                    reasons.append("First recorded login for this account")
+                for feature, text in HISTORY_REASONS.items():
+                    if history.get(feature) and not history.get("first_login"):
+                        reasons.append(text)
+        input_data = pd.DataFrame([model_row])
 
         # Print exact feature values passed to the model
         print("\n" + "🔬 " * 8 + " EXACT MODEL INPUT VECTOR " + "🔬 " * 8, flush=True)
@@ -213,7 +299,9 @@ class AdaptiveRiskEngine:
                 probabilities = self.model.predict_proba(input_data)[0]
                 base_ml_risk = float(probabilities[1])
                 try:
-                    shap_attributions = self._model_shap_attributions(input_data)
+                    shap_attributions = (self._grouped_shap_attributions(input_data)
+                                         if self.model_version == 2
+                                         else self._model_shap_attributions(input_data))
                 except Exception as exc:
                     print(f"[Risk Engine] Attribution unavailable: {exc}")
                 print("\n" + "🔍 " * 8 + " MODEL DIAGNOSTICS " + "🔍 " * 8, flush=True)
@@ -231,10 +319,9 @@ class AdaptiveRiskEngine:
 
         # Stateful Device Profile Trust Adjustments
 
-        if 17 <= local_hour <= 22 and base_ml_risk > 0.40:
-            base_ml_risk = 0.40
-            reasons.append("Clinical shift Context: Evening handover window dampening applied")
-        elif 0 <= local_hour < 5:
+        # The former evening cap (17:00-22:59 -> at most 0.40) was removed: it offset the version 1
+        # model's hour-of-day bias, and with the history model it would hide evening takeovers.
+        if 0 <= local_hour < 5:
             base_ml_risk = max(base_ml_risk, 0.65)
             reasons.append("Clinical shift Context: Early morning high-risk window applied")
         
@@ -263,6 +350,12 @@ class AdaptiveRiskEngine:
         if dormant_trusted_device and preliminary_score < 0.50:
             preliminary_score = 0.50
             reasons.append("Dormant trusted device: Minimum MFA challenge threshold applied")
+
+        if (self.model_version == 2 and history and history.get("new_country")
+                and not history.get("first_login")
+                and math.expm1(float(history.get("log_prior_logins", 0.0))) + 1e-9 >= NEW_COUNTRY_MIN_PRIOR_LOGINS):
+            preliminary_score = max(preliminary_score, 0.50)
+            reasons.append("New country for an established account: step-up verification required")
 
         is_mock = raw_features.get("is_mock_location", False)
         is_physical = raw_features.get("is_physical_device", True)
@@ -301,16 +394,19 @@ class AdaptiveRiskEngine:
             "access_denied": risk_action == "DENY",
             "reasons": reasons,
             "shap_attributions": shap_attributions,
+            "model_version": self.model_version,
+            "history_features": history if self.model_version == 2 else None,
         }
 
     async def evaluate_risk_and_revoke(
             self, raw_features: dict, ip_address: Optional[str] = None,
-            device_profile: Optional[Any] = None, *, current_jti: str | None = None,
+            device_profile: Optional[Any] = None, history: Optional[dict] = None, *,
+            current_jti: str | None = None,
             user_id: str | None = None, expires_at: datetime | None = None,
         ) -> dict:
         assessment = self.evaluate_risk(
             raw_features=raw_features, ip_address=ip_address,
-            device_profile=device_profile,
+            device_profile=device_profile, history=history,
         )
         if (assessment.get("access_denied", False) and current_jti and user_id
                 and expires_at is not None):

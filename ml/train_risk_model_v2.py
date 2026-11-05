@@ -14,6 +14,10 @@ user's earlier logins in the file:
     new_os                   operating system not seen before for this user
     new_device_type          device type not seen before for this user
 
+History comes from the user's earlier SUCCESSFUL logins only (--history successful, the default),
+so an attacker cannot make a new country look familiar by failing to log in a few times first.
+--history all reproduces the first experiment, which counted every attempt.
+
 The exact IP address is deliberately NOT used: mobile networks reassign addresses often, so
 "new IP" would fire constantly for legitimate Kenyan users. The country and network are stable.
 
@@ -33,7 +37,9 @@ risk-based authentication is designed to stop. Rows from attack IPs that are not
 are left out, because they are neither clear positives nor clear negatives. There are few account
 takeovers, so every one is used and results come from stratified 5-fold cross-validation (each
 login is scored by a model that never saw it). Outputs: reports/rf_v2_ato_evaluation.json and
-reports/figures/rf_v2_ato_roc_curve.png; no model artefact is saved in this mode.
+reports/figures/rf_v2_ato_roc_curve.png and reports/rf_v2_ato_out_of_fold.csv (each login's features
+and cross-validated probability). In this mode the Random Forest is then refitted on every
+login and saved as ml/artifacts/adaptive_risk_model_ato.joblib, the model the risk engine serves.
 """
 from __future__ import annotations
 
@@ -65,6 +71,12 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA_PATH = ROOT / "ml" / "data" / "rba-dataset.csv"
 V1_SCRIPT = ROOT / "ml" / "train_risk_model.py"
 ARTIFACT = ROOT / "ml" / "artifacts" / "adaptive_risk_model_v2.joblib"
+ATO_ARTIFACT = ROOT / "ml" / "artifacts" / "adaptive_risk_model_ato.joblib"
+# Feature values of a routine login, used as the SHAP reference (shared with the risk engine).
+REFERENCE = {"device_type": "mobile", "os_family": "Android", "hour_sin": 0.0, "hour_cos": -1.0,
+             "rtt_ms": 45.0, "first_login": 0.0, "log_prior_logins": math.log1p(20),
+             "log_hours_since_last": math.log1p(24), "new_country": 0.0, "new_asn": 0.0,
+             "new_user_agent": 0.0, "new_os": 0.0, "new_device_type": 0.0}
 REPORTS = ROOT / "reports"
 SEED, CHECK_SEED = 42, 7
 
@@ -73,7 +85,7 @@ BASE_NUM = ["hour_sin", "hour_cos", "rtt_ms"]
 HISTORY = ["first_login", "log_prior_logins", "log_hours_since_last", "new_country", "new_asn",
            "new_user_agent", "new_os", "new_device_type"]
 RAW = ["Login Timestamp", "User ID", "Round-Trip Time [ms]", "Country", "ASN", "User Agent String",
-       "OS Name and Version", "Device Type", "Is Attack IP", "Is Account Takeover"]
+       "OS Name and Version", "Device Type", "Login Successful", "Is Attack IP", "Is Account Takeover"]
 
 
 def load_v1():
@@ -87,7 +99,8 @@ def flag(series: pd.Series) -> np.ndarray:
     return series.astype(str).str.lower().isin(["true", "1", "t"]).to_numpy()
 
 
-def history_pass(path: Path, fraction: float, label_mode: str = "attack_or_ato", chunksize: int = 500_000):
+def history_pass(path: Path, fraction: float, label_mode: str = "attack_or_ato",
+                 history: str = "successful", chunksize: int = 500_000):
     """Stream the file once in order, computing history features for every row and keeping the
     candidate rows for both samples (all attack rows plus a random share of legitimate rows)."""
     rng_a, rng_b = np.random.default_rng(SEED), np.random.default_rng(CHECK_SEED)
@@ -125,6 +138,7 @@ def history_pass(path: Path, fraction: float, label_mode: str = "attack_or_ato",
         agent = chunk["User Agent String"].astype(str).to_numpy()
         os_name = chunk["OS Name and Version"].astype(str).str.split().str[0].fillna("").to_numpy()
         device = chunk["Device Type"].astype(str).to_numpy()
+        success = flag(chunk["Login Successful"]) if history == "successful" else np.ones(n, dtype=bool)
 
         features = np.zeros((n, len(HISTORY)), dtype=np.float32)
         for i in range(n):
@@ -150,11 +164,12 @@ def history_pass(path: Path, fraction: float, label_mode: str = "attack_or_ato",
                 row[2] = math.log1p(gap)
                 for k, key in enumerate(keys):
                     row[3 + k] = 0.0 if key in seen else 1.0
-            for key in keys:
-                seen.add(key)
-            state[0] = prior + 1
-            if t >= 0:
-                state[1] = t
+            if success[i]:                      # only successful logins become history
+                for key in keys:
+                    seen.add(key)
+                state[0] = prior + 1
+                if t >= 0:
+                    state[1] = t
 
         if keep.any():
             part = chunk.loc[keep, RAW].copy()
@@ -168,7 +183,7 @@ def history_pass(path: Path, fraction: float, label_mode: str = "attack_or_ato",
 
     frame = pd.concat(kept, ignore_index=True)
     return frame, {"rows_read": rows, "users": len(users), "out_of_order_timestamps": out_of_order,
-                   "pass_seconds": round(time.time() - started, 1)}
+                   "history_from": history, "pass_seconds": round(time.time() - started, 1)}
 
 
 def draw(frame: pd.DataFrame, column: str, n_normal: int, n_attack: int, seed: int) -> pd.DataFrame:
@@ -266,11 +281,30 @@ def run_account_takeover(frame, info, args, v1):
         print(f"\n{name}\n  AUC={r['roc_auc']:.4f}  AP={r['average_precision']:.4f}  F1@0.5={r['at_0.5']['f1']:.4f}  "
               f"F1@tuned={t['f1']:.4f}  P={t['precision']:.3f} R={t['recall']:.3f} FPR={t['false_positive_rate']:.4f}  "
               f"{t['confusion_matrix']}")
-    final = MODELS["rf_v2_history_features"]().fit(X, y)
+    final = MODELS["rf_v2_history_features"]().fit(X, y)     # refit on every login for deployment
     names = final.named_steps["preprocessor"].get_feature_names_out()
     results["rf_v2_history_features"]["feature_importance"] = dict(sorted(
         zip(map(str, names), map(float, final.named_steps["classifier"].feature_importances_)),
         key=lambda item: -item[1]))
+    out_of_fold = cross_validated(MODELS["rf_v2_history_features"], X, y, False)[0]
+    results["engine_policy_simulation"] = policy_simulation(out_of_fold, X, y, new_country_rule=True)
+    results["engine_policy_simulation_without_new_country_rule"] = policy_simulation(
+        out_of_fold, X, y, new_country_rule=False)
+    for title, key in (("with the new-country rule (as deployed)", "engine_policy_simulation"),
+                       ("without the new-country rule", "engine_policy_simulation_without_new_country_rule")):
+        print(f"\nRisk-engine policy simulation, {title} (out-of-fold probabilities):")
+        for state, values in results[key].items():
+            print(f"  {state:34} " + "  ".join(f"{k}={v:.3f}" for k, v in values.items()))
+    # Keep the scored logins so policy changes can be re-simulated without another pass over the file.
+    REPORTS.mkdir(parents=True, exist_ok=True)
+    X.assign(label=y.to_numpy(), out_of_fold_probability=out_of_fold).to_csv(
+        REPORTS / "rf_v2_ato_out_of_fold.csv", index=False)
+    ATO_ARTIFACT.parent.mkdir(parents=True, exist_ok=True)
+    joblib.dump({"pipeline": final, "version": 2, "label": "account_takeover",
+                 "categorical": BASE_CAT, "numeric": BASE_NUM + HISTORY, "history_features": HISTORY,
+                 "history_from": info["history_from"], "reference": REFERENCE,
+                 "trained_at": datetime.now(timezone.utc).isoformat(),
+                 "training_rows": int(len(y)), "takeovers": int(y.sum())}, ATO_ARTIFACT)
     takeovers = sample[sample["label"] == 1]
     profile = {feature: float(takeovers[feature].mean()) for feature in HISTORY}
     legit = sample[sample["label"] == 0]
@@ -291,7 +325,42 @@ def run_account_takeover(frame, info, args, v1):
     print("\nMean history features, takeovers vs legitimate:")
     for feature in HISTORY:
         print(f"  {feature:22} {profile[feature]:8.3f}   {profile_legit[feature]:8.3f}")
-    print(f"\nSaved {REPORTS / 'rf_v2_ato_evaluation.json'} and {REPORTS / 'figures' / 'rf_v2_ato_roc_curve.png'}")
+    print(f"\nSaved {ATO_ARTIFACT}, {REPORTS / 'rf_v2_ato_evaluation.json'} and "
+          f"{REPORTS / 'figures' / 'rf_v2_ato_roc_curve.png'}")
+
+
+NEW_COUNTRY_MIN_PRIOR_LOGINS = 3      # same value as app/services/risk_engine.py
+
+
+def policy_simulation(probability: np.ndarray, X: pd.DataFrame, y: pd.Series,
+                      new_country_rule: bool = True) -> dict:
+    """Apply the deployed engine's rules to model probabilities, for a normal IP on a physical device.
+
+    Mirrors AdaptiveRiskEngine with the version 2 model: early-morning floor (00:00-04:59 -> at least
+    0.65), device-trust adjustment, the new-country rule (a country new to an account with at least
+    three earlier successful logins -> at least 0.50, whatever the device trust), CHALLENGE at 0.50
+    and DENY at 0.85. Compared with static MFA.
+    """
+    angle = np.arctan2(X["hour_sin"].to_numpy(), X["hour_cos"].to_numpy())
+    hours = np.mod(np.rint(angle * 24 / (2 * np.pi)), 24).astype(int)
+    base = probability.copy()
+    base[hours < 5] = np.maximum(base[hours < 5], 0.65)
+    legit, takeover = (y == 0).to_numpy(), (y == 1).to_numpy()
+    result = {}
+    for state, adjustment in {"NEW": 0.10, "PROBATIONARY": 0.0, "TRUSTED (active within 30 days)": -0.25}.items():
+        score = np.clip(np.round(base + adjustment, 2), 0, 1)
+        if new_country_rule:
+            established = np.expm1(X["log_prior_logins"].to_numpy()) + 1e-9 >= NEW_COUNTRY_MIN_PRIOR_LOGINS
+            rule = (X["new_country"].to_numpy() == 1) & (X["first_login"].to_numpy() == 0) & established
+            score[rule] = np.maximum(score[rule], 0.50)
+        challenged = score >= 0.50
+        denied = score >= 0.85
+        result[state] = {"legitimate_challenged_or_denied": float(challenged[legit].mean()),
+                         "legitimate_denied": float(denied[legit].mean()),
+                         "takeovers_challenged_or_denied": float(challenged[takeover].mean()),
+                         "takeovers_denied": float(denied[takeover].mean())}
+    result["static_mfa_baseline"] = {"legitimate_challenged_or_denied": 1.0, "takeovers_challenged_or_denied": 1.0}
+    return result
 
 
 def plot_roc(curves, path, title):
@@ -331,13 +400,15 @@ def main():
     parser.add_argument("--normal", type=int, default=15000)
     parser.add_argument("--attack", type=int, default=3000)
     parser.add_argument("--random-fraction", type=float, default=0.002)
+    parser.add_argument("--history", choices=["successful", "all"], default="successful",
+                        help="Build history from successful logins only (default) or from every attempt")
     parser.add_argument("--label", choices=["attack_or_ato", "ato"], default="attack_or_ato",
                         help="attack_or_ato: attack IP or account takeover (default); ato: account takeovers only")
     args = parser.parse_args()
 
     v1 = load_v1()
     print(f"Streaming {args.data} once to build per-user history ...")
-    frame, info = history_pass(args.data, args.random_fraction, args.label)
+    frame, info = history_pass(args.data, args.random_fraction, args.label, args.history)
     if info["out_of_order_timestamps"]:
         print(f"WARNING: {info['out_of_order_timestamps']:,} rows are earlier than the row before them; "
               "history assumes the file is in time order.")

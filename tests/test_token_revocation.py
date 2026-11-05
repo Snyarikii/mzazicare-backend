@@ -23,6 +23,25 @@ from app.core.rate_limit import limiter
 limiter.enabled = False
 
 
+# The history lookups have their own tests (test_login_history.py). Here the fake database answers
+# queries in a fixed order, so the lookups are stubbed: no history, and no challenged-login context.
+_history_patches = []
+
+
+def setUpModule():
+    from unittest.mock import AsyncMock, patch
+    from app.services import login_history
+    for name in ("lookup_history", "latest_challenge_columns"):
+        stub = patch.object(login_history, name, new=AsyncMock(return_value=None))
+        stub.start()
+        _history_patches.append(stub)
+
+
+def tearDownModule():
+    while _history_patches:
+        _history_patches.pop().stop()
+
+
 class Result:
     def __init__(self, value):
         self.value = value
