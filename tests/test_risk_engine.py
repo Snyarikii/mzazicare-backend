@@ -8,6 +8,16 @@ from unittest.mock import patch
 from app.services.risk_engine import KNOWN_MALICIOUS_IPS, risk_engine
 
 
+class FixedRiskModel:
+    """Stands in for the trained model so a test controls the base probability exactly."""
+
+    def __init__(self, risk):
+        self.risk = risk
+
+    def predict_proba(self, input_data):
+        return [[1.0 - self.risk, self.risk]]
+
+
 class RiskEngineDecisionTests(unittest.TestCase):
     def evaluate(self, device_profile=None, **features):
         with contextlib.redirect_stdout(io.StringIO()):
@@ -74,12 +84,15 @@ class RiskEngineDecisionTests(unittest.TestCase):
                       result["reasons"])
 
     def test_low_model_risk_dormant_device_still_requires_mfa(self):
+        # Pin the model probability: this test checks the 0.50 floor for dormant trusted devices,
+        # which only applies when the model's risk is low (0.05 + 0.35 = 0.40 is raised to 0.50).
         profile = SimpleNamespace(trust_state="TRUSTED",
                                   last_login_at=datetime.utcnow() - timedelta(days=45))
-        result = self.evaluate(device_profile=profile, local_hour=10,
-                               os_name="iOS", network_type="WIFI",
-                               ip_address="102.222.140.1",
-                               is_physical_device=True, is_mock_location=False)
+        with patch.object(risk_engine, "model", FixedRiskModel(0.05)):
+            result = self.evaluate(device_profile=profile, local_hour=10,
+                                   os_name="iOS", network_type="WIFI",
+                                   ip_address="102.222.140.1",
+                                   is_physical_device=True, is_mock_location=False)
         self.assertEqual(result["device_adjustment"], 0.35)
         self.assertEqual(result["uts_score"], 0.50)
         self.assertEqual(result["risk_action"], "CHALLENGE")
@@ -88,13 +101,6 @@ class RiskEngineDecisionTests(unittest.TestCase):
                       result["reasons"])
 
     def test_action_threshold_boundaries(self):
-        class FixedRiskModel:
-            def __init__(self, risk):
-                self.risk = risk
-
-            def predict_proba(self, input_data):
-                return [[1.0 - self.risk, self.risk]]
-
         for model_risk, expected_score, expected_action in [
             (0.39, 0.49, "ALLOW"),
             (0.40, 0.50, "CHALLENGE"),

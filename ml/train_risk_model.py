@@ -19,50 +19,48 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 OUTPUT_MODEL_PATH = os.path.join(OUTPUT_DIR, "adaptive_risk_model.joblib")
 
 
-def load_rba_csv(path: str, target_normal: int = 15000, target_attack: int = 3000, chunksize: int = 50000, max_chunks: int = 20):
+def load_rba_csv(path: str, target_normal: int = 15000, target_attack: int = 3000,
+                 chunksize: int = 200_000, random_fraction: float = 0.002, seed: int = 42):
     """
-    Streams the large RBA CSV in chunks using chunksize:
-    - Retains attack & ATO records (minority class).
-    - Collects up to target_normal baseline logins.
-    """
-    print(f"📖 Streaming from: {path}")
-    attack_chunks = []
-    normal_chunks = []
-    normal_count = 0
-    attack_count = 0
+    Draws a seeded random sample from the whole RBA CSV in one streaming pass.
 
-    # Read in chunks to avoid memory overflow
+    Every attack row (Is Attack IP or Is Account Takeover) is kept as a candidate, together with a
+    random `random_fraction` of the legitimate rows; target_attack and target_normal rows are then
+    sampled from those candidates. Sampling the whole file matters: an earlier version took the
+    first rows of the file, so the legitimate logins all came from a few hours of one day and the
+    model learned the hour of day instead of attack behaviour (ROC-AUC 0.49 on a random sample).
+    """
+    print(f"📖 Streaming from: {path} (random sample, seed {seed})")
+    rng = np.random.default_rng(seed)
+    attack_chunks, normal_chunks, rows_read = [], [], 0
+
     for chunk in pd.read_csv(path, chunksize=chunksize, low_memory=False):
         chunk.columns = chunk.columns.str.strip()
+        rows_read += len(chunk)
 
         # Parse boolean targets reliably (handles strings or raw booleans)
         is_ato = chunk['Is Account Takeover'].astype(str).str.lower().isin(['true', '1', 't'])
         is_attack_ip = chunk['Is Attack IP'].astype(str).str.lower().isin(['true', '1', 't'])
         is_attack = is_ato | is_attack_ip
 
-        if attack_count < target_attack:
-            attacks = chunk[is_attack]
-            needed_attacks = target_attack - attack_count
-            sample_att = attacks.head(needed_attacks)
-            attack_chunks.append(sample_att)
-            attack_count += len(sample_att)
+        attack_chunks.append(chunk[is_attack])
+        normals = chunk[~is_attack]
+        normal_chunks.append(normals[rng.random(len(normals)) < random_fraction])
 
-        # 2. Grab normal rows up to target
-        if normal_count < target_normal:
-            normals = chunk[~is_attack]
-            needed_norm = target_normal - normal_count
-            sample_norm = normals.head(needed_norm)
-            normal_chunks.append(sample_norm)
-            normal_count += len(sample_norm)
+    df_attacks = pd.concat(attack_chunks, ignore_index=True)
+    df_normal = pd.concat(normal_chunks, ignore_index=True)
+    if len(df_normal) < target_normal:
+        raise ValueError(f"Only {len(df_normal)} legitimate rows sampled; raise random_fraction.")
+    df_attacks = df_attacks.sample(min(target_attack, len(df_attacks)), random_state=seed)
+    df_normal = df_normal.sample(target_normal, random_state=seed)
+    print(f"   Read {rows_read:,} rows; sampled {len(df_normal):,} legitimate and {len(df_attacks):,} attack logins")
+    df = pd.concat([df_normal, df_attacks], ignore_index=True)
 
-        if normal_count >= target_normal and attack_count >= target_attack:
-            break
+    return engineer_features(df)
 
-    
-    df_attacks = pd.concat(attack_chunks, ignore_index=True) if attack_chunks else pd.DataFrame()
-    df_normal = pd.concat(normal_chunks, ignore_index=True) if normal_chunks else pd.DataFrame()
-    df = pd.concat([df_normal, df_attacks], ignore_index=True)  
 
+def engineer_features(df: pd.DataFrame):
+    """Turn raw RBA rows into the five model inputs and the attack label (shared with the evaluation script)."""
     # Feature Engineering
     y = ((df['Is Account Takeover'].astype(str).str.lower().isin(['true', '1', 't'])) |
          (df['Is Attack IP'].astype(str).str.lower().isin(['true', '1', 't']))).astype(int)

@@ -23,7 +23,9 @@ def _event_aggregates(path: Path, stream: str) -> pd.DataFrame:
     partials = []
     for chunk in pd.read_csv(path, usecols=wanted, dtype={"user": "category", "pc": "category"},
                              chunksize=250_000, low_memory=True):
-        chunk["timestamp"] = pd.to_datetime(chunk["date"], errors="coerce", dayfirst=True, utc=True)
+        # CERT r4.2 dates are month-first. The earlier dayfirst=True parse inferred day-first for some
+        # chunks and silently dropped every event whose day was above 12 (about a third of the data).
+        chunk["timestamp"] = pd.to_datetime(chunk["date"], format="%m/%d/%Y %H:%M:%S", errors="coerce", utc=True)
         chunk.dropna(subset=["timestamp", "user"], inplace=True)
         chunk["date_only"] = chunk["timestamp"].dt.date
         chunk["hour"] = chunk["timestamp"].dt.hour
