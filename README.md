@@ -9,8 +9,10 @@ You need Python 3.13 and a running PostgreSQL database. From the repository root
 ```powershell
 python -m venv venv
 .\venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
+python -m pip install -r requirements-dev.txt
 ```
+
+`requirements-dev.txt` installs the API's packages (`requirements.txt`) plus what local work needs: `torch` and `matplotlib` for `ml/train_ueba_autoencoder.py`, and `httpx` for the test suite. The Docker image installs only `requirements.txt`, so it never downloads PyTorch or its CUDA libraries.
 
 On macOS or Linux, activate the environment with `source venv/bin/activate` instead.
 

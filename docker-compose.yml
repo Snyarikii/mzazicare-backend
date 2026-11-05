@@ -1,0 +1,51 @@
+# Secrets live in .env (gitignored). This file only references them, so it is safe to commit.
+# Compose reads .env from this folder both for the ${...} values below and for env_file.
+
+services:
+  db:
+    # Same image as the original container: the Alpine variant sorts text differently,
+    # which can corrupt text indexes in an existing data directory.
+    image: postgres:16
+    container_name: mzazicare-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+      POSTGRES_DB: mzazicare_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - mzazicare_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d mzazicare_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    container_name: mzazicare-backend
+    restart: always
+    ports:
+      - "8000:8000"
+    # Passes every .env setting (PHI key, SMTP, Google, admin email) to the container.
+    env_file:
+      - .env
+    # These override .env inside the container.
+    environment:
+      # The app uses the async driver; "db" is the service above, not localhost.
+      DATABASE_URL: postgresql+asyncpg://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}@db:5432/mzazicare_db
+      # JWT signing key for access and refresh tokens. Compose refuses to start without it.
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY must be set in .env}
+      ENVIRONMENT: development
+      SEED_DEMO_DATA: "true"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  # The existing volume from the original mzazicare-postgres container, holding all current data.
+  # external: Compose reuses it as-is and never creates, renames or deletes it
+  # (docker compose down -v leaves it alone too).
+  mzazicare_pgdata:
+    external: true

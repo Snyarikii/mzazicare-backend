@@ -1,0 +1,17 @@
+# Secrets are passed at runtime (docker run --env-file .env), never baked into the image.
+.env
+.env.*
+
+# Local environments, caches and data that do not belong in the image
+venv/
+.venv/
+__pycache__/
+**/__pycache__/
+*.pyc
+.pytest_cache/
+backups/
+ml/data/
+.git/
+.gitignore
+.dockerignore
+Dockerfile
