@@ -37,6 +37,10 @@ class BehavioralEvaluationResponse(BaseModel):
     is_anomaly: bool
     session_revocation_recommended: bool
     risk_factors: list[str]
+    # 2 = per-user rolling baseline model, 1 = population model, 0 = heuristic fallback.
+    model_version: int | None = None
+    # Earlier telemetry snapshots in the user's 30-day baseline.
+    baseline_samples: int | None = None
 
 
 class AnomalyResetRequest(BaseModel):

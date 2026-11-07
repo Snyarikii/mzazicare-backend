@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Column, Boolean, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint, JSON
+from sqlalchemy import Column, Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint, JSON
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -146,6 +146,10 @@ class BehavioralBaseline(Base):
     avg_access_frequency: Mapped[float] = mapped_column(Float, nullable=False)
     out_of_hours_ratio: Mapped[float] = mapped_column(Float, nullable=False)
     anomaly_threshold: Mapped[float] = mapped_column(Float, nullable=False)
+    # Rolling per-user means of the six behavioral counters (model version 2) and how many
+    # earlier telemetry snapshots they were computed from.
+    feature_means: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    sample_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     last_updated: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
     )
@@ -257,6 +261,7 @@ class TokenBlacklist(Base):
 
 class BehavioralAuditLog(Base):
     __tablename__ = "behavioral_audit_logs"
+    __table_args__ = (Index("ix_behavioral_audit_logs_user_time", "user_id", "timestamp"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(

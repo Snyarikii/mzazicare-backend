@@ -91,6 +91,18 @@ curl.exe -L -o app\ml\ip2asn-combined.tsv.gz https://iptoasn.com/data/ip2asn-com
 
 Without the table the engine still runs and treats every network as unknown. Without Cloudflare (local development) the country is unknown. Unknown values never count as new. For demonstrations, the `X-Simulate-Country` header (for example `RU`) overrides the country.
 
+## Behavioral model and per-user baseline
+
+The session behavioral engine serves the version 2 Isolation Forest. Each telemetry window keeps the six counters (logons, devices, activity span, off-hours ratio, records accessed, payload bytes) and adds six relative features: how far each counter sits above or below the same user's average over their last 30 days of telemetry, `log1p(value) - log1p(mean)`. A user needs five earlier snapshots before the baseline is used; until then the relative features are 0. Snapshots that triggered revocation are left out of the baseline, and the latest baseline is saved in `behavioral_baselines`. Train and evaluate it against the CERT r4.2 answer key:
+
+```powershell
+python ml/train_behavioral_model_v2.py          # archives the version 1 model to ml/artifacts once
+python scripts/evaluate_ueba_iforest.py --answers ml/data/answers
+python -m alembic upgrade head                  # feature_means, sample_count and the baseline index
+```
+
+The engine also loads a version 1 model file, in which case it scores without a baseline. The exfiltration rule (35 or more records or 10 MB) applies to both.
+
 ## API areas
 
 | Prefix | Purpose |
