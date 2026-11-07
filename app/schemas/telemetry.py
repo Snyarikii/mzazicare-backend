@@ -43,6 +43,18 @@ class BehavioralEvaluationResponse(BaseModel):
     baseline_samples: int | None = None
 
 
+class DataExportEvent(BaseModel):
+    """Patient data left the app: a share from the app or a screenshot of a patient screen."""
+    session_id: str = Field(..., min_length=8, max_length=128)
+    kind: Literal["SHARE", "SCREENSHOT"]
+    screen: str = Field(..., min_length=1, max_length=60, pattern=r"^[A-Za-z0-9_\- ]+$")
+
+
+class DataExportResponse(BaseModel):
+    status: Literal["RECORDED"]
+    kind: Literal["SHARE", "SCREENSHOT"]
+
+
 class AnomalyResetRequest(BaseModel):
     session_id: str = Field(..., min_length=8, max_length=128)
 

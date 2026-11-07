@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-07T12:46:22.491228+00:00",
+  "generated_at": "2026-11-07T13:59:12.855173+00:00",
   "environment": {
     "python": "3.13.7",
     "scikit_learn": "1.9.1",
@@ -14,6 +14,7 @@
     "first_day": "2010-01-02",
     "last_day": "2011-05-17",
     "user_days_with_baseline": 325269,
+    "device_csv": "C:\\mzazicare-backend\\ml\\data\\device.csv",
     "label_source": "events",
     "insider_records": 70,
     "malicious_user_days": 964
@@ -110,8 +111,8 @@
     "runtime_parity_check": "matched",
     "inference_latency_single_user_day": {
       "runs": 500,
-      "median_ms": 9.675100001913961,
-      "p95_ms": 9.972870000819967
+      "median_ms": 21.219049998762785,
+      "p95_ms": 26.577234998694614
     },
     "temporal_holdout": {
       "cutoff_day": "2010-12-18",
@@ -271,8 +272,8 @@
     "runtime_parity_check": "matched",
     "inference_latency_single_user_day": {
       "runs": 500,
-      "median_ms": 9.687550000307965,
-      "p95_ms": 10.255469999719935
+      "median_ms": 21.215800001300522,
+      "p95_ms": 22.34393000035197
     },
     "temporal_holdout": {
       "cutoff_day": "2010-12-18",
@@ -346,73 +347,239 @@
       }
     }
   },
+  "v3": {
+    "features": [
+      "total_logons",
+      "distinct_devices",
+      "activity_span_hours",
+      "off_hours_ratio",
+      "records_accessed_count",
+      "total_payload_bytes",
+      "data_exports",
+      "relative_total_logons",
+      "relative_distinct_devices",
+      "relative_activity_span_hours",
+      "relative_off_hours_ratio",
+      "relative_records_accessed_count",
+      "relative_total_payload_bytes",
+      "relative_data_exports",
+      "first_data_export"
+    ],
+    "transductive": {
+      "evaluated_user_days": 330272,
+      "malicious_user_days": 966,
+      "threshold_free": {
+        "roc_auc": 0.8527437663339146,
+        "average_precision": 0.012840405729414833
+      },
+      "isolation_forest_flag": {
+        "confusion_matrix": {
+          "TP": 144,
+          "FN": 822,
+          "FP": 9764,
+          "TN": 319542
+        },
+        "FAR": 0.8509316770186336,
+        "FRR": 0.02965023412874348,
+        "precision": 0.014533710133225677,
+        "recall_detection_rate": 0.14906832298136646,
+        "f1": 0.02648519404083134,
+        "flag_rate": 0.029999515550818718,
+        "random_baseline_same_flag_rate": {
+          "FAR": 0.9700004844491813,
+          "FRR": 0.029999515550818718
+        }
+      },
+      "runtime_challenge_or_deny": {
+        "confusion_matrix": {
+          "TP": 147,
+          "FN": 819,
+          "FP": 9771,
+          "TN": 319535
+        },
+        "FAR": 0.8478260869565217,
+        "FRR": 0.029671490953702636,
+        "precision": 0.014821536600120993,
+        "recall_detection_rate": 0.15217391304347827,
+        "f1": 0.027012127894156558,
+        "flag_rate": 0.030029793624648773,
+        "random_baseline_same_flag_rate": {
+          "FAR": 0.9699702063753513,
+          "FRR": 0.030029793624648773
+        }
+      },
+      "runtime_deny_only": {
+        "confusion_matrix": {
+          "TP": 0,
+          "FN": 966,
+          "FP": 149,
+          "TN": 329157
+        },
+        "FAR": 1.0,
+        "FRR": 0.00045246670270204613,
+        "precision": 0.0,
+        "recall_detection_rate": 0.0,
+        "f1": 0.0,
+        "flag_rate": 0.0004511433000678229,
+        "random_baseline_same_flag_rate": {
+          "FAR": 0.9995488566999322,
+          "FRR": 0.0004511433000678229
+        }
+      },
+      "user_level_isolation_forest_flag": {
+        "insider_users": 70,
+        "insider_users_detected_on_a_malicious_day": 59,
+        "legitimate_users": 930,
+        "legitimate_users_flagged_at_least_once": 212
+      }
+    },
+    "runtime_parity_check": "matched",
+    "inference_latency_single_user_day": {
+      "runs": 500,
+      "median_ms": 21.167000000787084,
+      "p95_ms": 24.33975000039936
+    },
+    "temporal_holdout": {
+      "cutoff_day": "2010-12-18",
+      "fit_user_days": 239726,
+      "malicious_user_days_in_fit": 700,
+      "evaluated_user_days": 90546,
+      "malicious_user_days": 266,
+      "threshold_free": {
+        "roc_auc": 0.8540193666487885,
+        "average_precision": 0.009597660114287263
+      },
+      "isolation_forest_flag": {
+        "confusion_matrix": {
+          "TP": 19,
+          "FN": 247,
+          "FP": 2230,
+          "TN": 88050
+        },
+        "FAR": 0.9285714285714286,
+        "FRR": 0.024700930438635357,
+        "precision": 0.008448199199644287,
+        "recall_detection_rate": 0.07142857142857142,
+        "f1": 0.01510934393638171,
+        "flag_rate": 0.024838203785920967,
+        "random_baseline_same_flag_rate": {
+          "FAR": 0.9751617962140791,
+          "FRR": 0.024838203785920967
+        }
+      },
+      "runtime_challenge_or_deny": {
+        "confusion_matrix": {
+          "TP": 20,
+          "FN": 246,
+          "FP": 2230,
+          "TN": 88050
+        },
+        "FAR": 0.924812030075188,
+        "FRR": 0.024700930438635357,
+        "precision": 0.008888888888888889,
+        "recall_detection_rate": 0.07518796992481203,
+        "f1": 0.01589825119236884,
+        "flag_rate": 0.02484924789609701,
+        "random_baseline_same_flag_rate": {
+          "FAR": 0.975150752103903,
+          "FRR": 0.02484924789609701
+        }
+      },
+      "runtime_deny_only": {
+        "confusion_matrix": {
+          "TP": 0,
+          "FN": 266,
+          "FP": 28,
+          "TN": 90252
+        },
+        "FAR": 1.0,
+        "FRR": 0.0003101462117855561,
+        "precision": 0.0,
+        "recall_detection_rate": 0.0,
+        "f1": 0.0,
+        "flag_rate": 0.00030923508492920727,
+        "random_baseline_same_flag_rate": {
+          "FAR": 0.9996907649150708,
+          "FRR": 0.00030923508492920727
+        }
+      },
+      "user_level_isolation_forest_flag": {
+        "insider_users": 20,
+        "insider_users_detected_on_a_malicious_day": 11,
+        "legitimate_users": 875,
+        "legitimate_users_flagged_at_least_once": 135
+      }
+    },
+    "user_days": 330272,
+    "malicious_user_days": 966
+  },
   "deployed_artifact_on_all_user_days": {
-    "version": 2,
-    "evaluated_user_days": 330269,
-    "malicious_user_days": 964,
+    "version": 3,
+    "evaluated_user_days": 330272,
+    "malicious_user_days": 966,
     "threshold_free": {
-      "roc_auc": 0.8250286438791216,
-      "average_precision": 0.009437748385781115
+      "roc_auc": 0.8527437663339146,
+      "average_precision": 0.012840405729414833
     },
     "isolation_forest_flag": {
       "confusion_matrix": {
-        "TP": 102,
-        "FN": 862,
-        "FP": 9799,
-        "TN": 319506
+        "TP": 144,
+        "FN": 822,
+        "FP": 9764,
+        "TN": 319542
       },
-      "FAR": 0.8941908713692946,
-      "FRR": 0.029756608615113648,
-      "precision": 0.010301989698010302,
-      "recall_detection_rate": 0.10580912863070539,
-      "f1": 0.01877588587206627,
-      "flag_rate": 0.029978593207355218,
+      "FAR": 0.8509316770186336,
+      "FRR": 0.02965023412874348,
+      "precision": 0.014533710133225677,
+      "recall_detection_rate": 0.14906832298136646,
+      "f1": 0.02648519404083134,
+      "flag_rate": 0.029999515550818718,
       "random_baseline_same_flag_rate": {
-        "FAR": 0.9700214067926448,
-        "FRR": 0.029978593207355218
+        "FAR": 0.9700004844491813,
+        "FRR": 0.029999515550818718
       }
     },
     "runtime_challenge_or_deny": {
       "confusion_matrix": {
-        "TP": 102,
-        "FN": 862,
-        "FP": 9800,
-        "TN": 319505
+        "TP": 147,
+        "FN": 819,
+        "FP": 9771,
+        "TN": 319535
       },
-      "FAR": 0.8941908713692946,
-      "FRR": 0.029759645313615038,
-      "precision": 0.010300949303171077,
-      "recall_detection_rate": 0.10580912863070539,
-      "f1": 0.018774157923799006,
-      "flag_rate": 0.029981621042241325,
+      "FAR": 0.8478260869565217,
+      "FRR": 0.029671490953702636,
+      "precision": 0.014821536600120993,
+      "recall_detection_rate": 0.15217391304347827,
+      "f1": 0.027012127894156558,
+      "flag_rate": 0.030029793624648773,
       "random_baseline_same_flag_rate": {
-        "FAR": 0.9700183789577587,
-        "FRR": 0.029981621042241325
+        "FAR": 0.9699702063753513,
+        "FRR": 0.030029793624648773
       }
     },
     "runtime_deny_only": {
       "confusion_matrix": {
         "TP": 0,
-        "FN": 964,
+        "FN": 966,
         "FP": 149,
-        "TN": 329156
+        "TN": 329157
       },
       "FAR": 1.0,
-      "FRR": 0.00045246807670700417,
+      "FRR": 0.00045246670270204613,
       "precision": 0.0,
       "recall_detection_rate": 0.0,
       "f1": 0.0,
-      "flag_rate": 0.0004511473980300906,
+      "flag_rate": 0.0004511433000678229,
       "random_baseline_same_flag_rate": {
-        "FAR": 0.9995488526019699,
-        "FRR": 0.0004511473980300906
+        "FAR": 0.9995488566999322,
+        "FRR": 0.0004511433000678229
       }
     },
     "user_level_isolation_forest_flag": {
       "insider_users": 70,
-      "insider_users_detected_on_a_malicious_day": 39,
+      "insider_users_detected_on_a_malicious_day": 59,
       "legitimate_users": 930,
-      "legitimate_users_flagged_at_least_once": 185
+      "legitimate_users_flagged_at_least_once": 212
     }
   }
 }

@@ -8,6 +8,7 @@ __pycache__/
 ml/data/rba-dataset.csv
 ml/data/file.csv
 ml/data/logon.csv
+ml/data/device.csv
 ml/data/answers/
 # IPtoASN network table (public domain); download as described in the README
 app/ml/ip2asn-combined.tsv.gz

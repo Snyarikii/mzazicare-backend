@@ -5,6 +5,11 @@ their earlier behavioral snapshots over the last 30 days. The six raw counters a
 relative features are added, relative_<name> = log1p(value) - log1p(baseline mean). Without at
 least five earlier snapshots the relative features are 0, exactly as in training
 (ml/train_behavioral_model_v2.py). A version 1 artifact (six population features) still loads.
+
+Model version 3 adds a seventh counter, data_exports: shares from the app and screenshots of patient
+screens in the current session, counted on the server. It gets its own relative feature and a
+first_data_export flag (the user's first export after at least five baseline snapshots). In
+training, CERT USB connections stand in for exports (ml/train_behavioral_model_v3.py).
 """
 from datetime import datetime, timedelta, timezone
 import logging
@@ -24,6 +29,10 @@ BASE_FEATURES = ["total_logons", "distinct_devices", "activity_span_hours", "off
                  "records_accessed_count", "total_payload_bytes"]
 FEATURES = BASE_FEATURES  # Version 1 feature list, kept for existing imports.
 RELATIVE_FEATURES = [f"relative_{name}" for name in BASE_FEATURES]
+EXPORT_FEATURE = "data_exports"
+# Counters averaged into every baseline. Snapshots from before exports were counted have none,
+# which is the same as zero exports.
+BASELINE_COUNTERS = BASE_FEATURES + [EXPORT_FEATURE]
 MODEL_PATH = Path(__file__).resolve().parents[1] / "ml" / "behavioral_anomaly_model.joblib"
 DEFAULT_WINDOW_DAYS = 30
 DEFAULT_MIN_HISTORY = 5
@@ -36,21 +45,39 @@ RELATIVE_REASONS = {
     "distinct_devices": ("More devices than this user normally uses", 2),
     "activity_span_hours": ("Activity span is much longer than this user's norm", 8),
     "total_logons": ("Sign-in count is well above this user's 30-day norm", 5),
+    EXPORT_FEATURE: ("Patient data is being shared or captured more than this user normally does", 2),
 }
+# Export policy rule: a first-ever export after an established history, or a burst of at least
+# EXPORT_SPIKE_MIN exports that is at least three times the user's norm, always needs step-up
+# verification. On CERT r4.2 (USB as the stand-in) each condition fires on about 0.01% of
+# user-days, a quarter of them malicious, against a 0.3% base rate.
+EXPORT_RULE_FLOOR = 0.50
+EXPORT_SPIKE_MIN = 5
 EMPTY_BASELINE = {"means": {}, "samples": 0}
 logger = logging.getLogger(__name__)
 
 
-def relative_features(vector: dict, baseline: dict | None, min_history: int = DEFAULT_MIN_HISTORY) -> dict:
+def relative_features(vector: dict, baseline: dict | None, min_history: int = DEFAULT_MIN_HISTORY,
+                      features: list[str] | None = None) -> dict:
     """log1p(value) - log1p(baseline mean); 0 for every feature without a usable baseline."""
+    features = features or BASE_FEATURES
     baseline = baseline or EMPTY_BASELINE
-    means = baseline.get("means") or {}
+    means = dict(baseline.get("means") or {})
+    if means and means.get(EXPORT_FEATURE) is None:
+        means[EXPORT_FEATURE] = 0.0  # A baseline from before exports were counted means none.
     usable = int(baseline.get("samples") or 0) >= min_history and all(
-        means.get(name) is not None for name in BASE_FEATURES)
+        means.get(name) is not None for name in features)
     if not usable:
-        return {f"relative_{name}": 0.0 for name in BASE_FEATURES}
+        return {f"relative_{name}": 0.0 for name in features}
     return {f"relative_{name}": float(np.log1p(max(vector[name], 0.0)) - np.log1p(max(float(means[name]), 0.0)))
-            for name in BASE_FEATURES}
+            for name in features}
+
+
+def first_data_export(vector: dict, prior_exports: float | None, baseline: dict | None,
+                      min_history: int = DEFAULT_MIN_HISTORY) -> float:
+    """1.0 when this is the user's first export after an established, export-free history."""
+    samples = int((baseline or EMPTY_BASELINE).get("samples") or 0)
+    return float(vector.get(EXPORT_FEATURE, 0.0) > 0 and float(prior_exports or 0) == 0 and samples >= min_history)
 
 
 async def load_user_baseline(db: AsyncSession, user_id: Any, *, window_days: int = DEFAULT_WINDOW_DAYS,
@@ -63,16 +90,18 @@ async def load_user_baseline(db: AsyncSession, user_id: Any, *, window_days: int
     since = (now or datetime.now(timezone.utc)) - timedelta(days=window_days)
     snapshot = BehavioralAuditLog.telemetry_snapshot
     columns = [func.avg(snapshot[name].as_float()).label(name) for name in BASE_FEATURES]
-    statement = select(func.count(snapshot["total_logons"].as_float()).label("samples"), *columns).where(
+    columns.append(func.avg(func.coalesce(snapshot[EXPORT_FEATURE].as_float(), 0.0)).label(EXPORT_FEATURE))
+    statement = select(func.count().label("samples"), *columns).where(
         BehavioralAuditLog.user_id == user_id,
         BehavioralAuditLog.timestamp >= since,
         BehavioralAuditLog.session_revocation_recommended.is_(False),
+        snapshot["total_logons"].as_float().isnot(None),
     )
     row = (await db.execute(statement)).one()
     samples = int(row[0] or 0)
     if not samples:
         return dict(EMPTY_BASELINE)
-    means = {name: (None if value is None else float(value)) for name, value in zip(BASE_FEATURES, row[1:])}
+    means = {name: (None if value is None else float(value)) for name, value in zip(BASELINE_COUNTERS, row[1:])}
     return {"means": means, "samples": samples}
 
 
@@ -88,7 +117,7 @@ async def store_user_baseline(db: AsyncSession, user_id: Any, baseline: dict, th
     row.avg_access_frequency = float(means.get("records_accessed_count") or 0.0)
     row.out_of_hours_ratio = float(means.get("off_hours_ratio") or 0.0)
     row.anomaly_threshold = float(threshold)
-    row.feature_means = {name: means.get(name) for name in BASE_FEATURES}
+    row.feature_means = {name: means.get(name) for name in BASELINE_COUNTERS}
     row.sample_count = int(baseline["samples"])
     row.last_updated = datetime.now(timezone.utc)
 
@@ -119,24 +148,29 @@ class BehavioralAnomalyEngine:
             print(f"[Behavioral Engine] Model artifact absent at {model_path}; using heuristic fallback.")
 
     def configure(self, artifact: Any) -> None:
-        """Load a version 1 pipeline, a version 1 bundle, or a version 2 bundle."""
+        """Load a version 1 pipeline or bundle, or a version 2 or 3 bundle."""
         bundle = artifact if isinstance(artifact, dict) else {"pipeline": artifact}
         self.model = bundle.get("pipeline")
         self.version = int(bundle.get("version", 1)) if self.model is not None else 1
         self.window_days = int(bundle.get("window_days", DEFAULT_WINDOW_DAYS))
         self.min_history = int(bundle.get("min_history", DEFAULT_MIN_HISTORY))
-        self.features = list(bundle.get("features") or (
-            BASE_FEATURES + RELATIVE_FEATURES if self.version == 2 else BASE_FEATURES))
+        default_base = BASELINE_COUNTERS if self.version >= 3 else BASE_FEATURES
+        self.base_features = list(bundle.get("base_features") or default_base)
+        self.flag_features = list(bundle.get("flag_features") or (
+            ["first_data_export"] if self.version >= 3 else []))
+        default_features = (self.base_features + [f"relative_{n}" for n in self.base_features]
+                            + self.flag_features) if self.version >= 2 else BASE_FEATURES
+        self.features = list(bundle.get("features") or default_features)
 
     @property
     def uses_baseline(self) -> bool:
-        return self.model is not None and self.version == 2
+        return self.model is not None and self.version >= 2
 
     async def evaluate_session_activity(self, user_id: Any, metrics: dict,
                                         db: AsyncSession | None, *, current_jti: str | None = None,
                                         expires_at: datetime | None = None,
                                         baseline: dict | None = None) -> dict:
-        vector = {name: float(metrics.get(name, 0) or 0) for name in BASE_FEATURES}
+        vector = {name: float(metrics.get(name, 0) or 0) for name in BASELINE_COUNTERS}
         if self.uses_baseline and baseline is None and db is not None:
             try:
                 baseline = await _in_savepoint(
@@ -144,14 +178,23 @@ class BehavioralAnomalyEngine:
             except Exception as exc:  # Never block scoring on the baseline lookup.
                 logger.warning("Behavioral baseline lookup failed for %s: %s", user_id, exc)
                 baseline = None
-        relative = relative_features(vector, baseline, self.min_history) if self.uses_baseline else {}
+        relative = (relative_features(vector, baseline, self.min_history, self.base_features)
+                    if self.uses_baseline else {})
         has_baseline = bool(baseline) and int(baseline.get("samples") or 0) >= self.min_history
+        first_export = first_data_export(vector, metrics.get("prior_data_exports"), baseline, self.min_history)
+        flags = {"first_data_export": first_export} if "first_data_export" in self.flag_features else {}
+        export_relative = relative.get(f"relative_{EXPORT_FEATURE}")
+        if export_relative is None:
+            export_relative = relative_features(vector, baseline, self.min_history, [EXPORT_FEATURE])[
+                f"relative_{EXPORT_FEATURE}"]
+        export_spike = (vector[EXPORT_FEATURE] >= EXPORT_SPIKE_MIN and has_baseline
+                        and export_relative >= RELATIVE_REASON_THRESHOLD)
 
         is_critical_exfiltration = (
             vector["records_accessed_count"] >= 35
             or vector["total_payload_bytes"] >= 10 * 1024 * 1024
         )
-        frame = pd.DataFrame([{**vector, **relative}])
+        frame = pd.DataFrame([{**vector, **relative, **flags}])
         if self.model is None:
             raw_score = self._fallback_score(vector)
         else:
@@ -176,6 +219,8 @@ class BehavioralAnomalyEngine:
             calibrated_score = 0.50 + (raw_score - 0.40) * 0.80
         else:
             calibrated_score = 0.75 + (raw_score - 0.70) * 1.00
+        if first_export or export_spike:
+            calibrated_score = max(calibrated_score, EXPORT_RULE_FLOOR)
         if is_critical_exfiltration:
             calibrated_score = max(calibrated_score, 0.85)
         final_score = round(min(max(calibrated_score, 0.0), 1.0), 2)
@@ -200,9 +245,16 @@ class BehavioralAnomalyEngine:
             factors.append("Critical exfiltration: Data payload reached 10 MB")
         if vector["activity_span_hours"] >= 16:
             factors.append("Unusually long activity span")
+        exports = int(vector[EXPORT_FEATURE])
+        if exports:
+            factors.append(f"Patient data left the app {exports} time{'s' if exports != 1 else ''} "
+                           "this session (share or screenshot)")
+        if first_export:
+            factors.append("First time this user has shared or captured patient data")
         if has_baseline:
             for name, (reason, minimum) in RELATIVE_REASONS.items():
-                if relative.get(f"relative_{name}", 0.0) >= RELATIVE_REASON_THRESHOLD and vector[name] >= minimum:
+                value = export_relative if name == EXPORT_FEATURE else relative.get(f"relative_{name}", 0.0)
+                if value >= RELATIVE_REASON_THRESHOLD and vector[name] >= minimum:
                     factors.append(reason)
         if risk_action != "ALLOW" and not factors:
             factors.append("Session activity deviates from the learned behavioral baseline")

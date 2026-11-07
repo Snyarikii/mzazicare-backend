@@ -116,6 +116,7 @@ class CareLog(Base):
 
 class SessionActivityLog(Base):
     __tablename__ = "session_activity_logs"
+    __table_args__ = (Index("ix_session_activity_logs_user_event", "user_id", "event_type"),)
 
     log_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4

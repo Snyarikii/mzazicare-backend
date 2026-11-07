@@ -7,8 +7,11 @@ both feature sets side by side:
     v1  six population features (ml/train_behavioral_model.py)
     v2  the six population features plus six per-user rolling-baseline features
         (ml/train_behavioral_model_v2.py)
+    v3  v2 plus data exports (CERT USB connections from device.csv as the stand-in for app
+        shares and screenshots), their baseline feature and a first-export flag
+        (ml/train_behavioral_model_v3.py; skipped when device.csv is missing)
 
-    python scripts/evaluate_ueba_iforest.py --answers path/to/answers [--model v1|v2|both]
+    python scripts/evaluate_ueba_iforest.py --answers path/to/answers [--model v1|v2|v3|all]
 
 --answers may be the extracted CERT "answers" folder or its insiders.csv file. When the
 per-incident detail files (answers/r4.2-*/...) are present, a user-day is labelled malicious
@@ -43,6 +46,7 @@ from sklearn.preprocessing import StandardScaler
 ROOT = Path(__file__).resolve().parents[1]
 TRAINING_SCRIPT = ROOT / "ml" / "train_behavioral_model.py"
 TRAINING_SCRIPT_V2 = ROOT / "ml" / "train_behavioral_model_v2.py"
+TRAINING_SCRIPT_V3 = ROOT / "ml" / "train_behavioral_model_v3.py"
 DEPLOYED_MODEL = ROOT / "app" / "ml" / "behavioral_anomaly_model.joblib"
 REPORT_PATH = ROOT / "reports" / "iforest_evaluation.json"
 
@@ -147,6 +151,12 @@ def runtime_scores(pipeline: Pipeline, features: pd.DataFrame) -> np.ndarray:
     raw = np.where(prediction == -1, np.maximum(raw, 0.65), raw)
     calibrated = np.where(raw <= 0.40, raw,
                           np.where(raw < 0.70, 0.50 + (raw - 0.40) * 0.80, 0.75 + (raw - 0.70)))
+    if "first_data_export" in features.columns:
+        # Export policy rule (version 3): first export, or a burst of 5+ at 3x the user's norm.
+        spike = (features["data_exports"].to_numpy() >= 5) & \
+                (features["relative_data_exports"].to_numpy() >= np.log(3.0))
+        export_rule = (features["first_data_export"].to_numpy() > 0) | spike
+        calibrated = np.where(export_rule, np.maximum(calibrated, 0.50), calibrated)
     critical = (features["records_accessed_count"].to_numpy() >= 35) | \
                (features["total_payload_bytes"].to_numpy() >= 10 * 1024 * 1024)
     calibrated = np.where(critical, np.maximum(calibrated, 0.85), calibrated)
@@ -163,11 +173,12 @@ def check_runtime_parity(pipeline: Pipeline, features: pd.DataFrame, samples: in
     sys.path.insert(0, str(ROOT))
     try:
         import asyncio
-        from app.services.behavioral_engine import BASE_FEATURES, BehavioralAnomalyEngine
+        from app.services.behavioral_engine import BehavioralAnomalyEngine
     except Exception as exc:  # The app package needs the backend's dependencies.
         return f"skipped ({type(exc).__name__}: {exc})"
     engine = BehavioralAnomalyEngine.__new__(BehavioralAnomalyEngine)
     engine.configure(bundle if bundle is not None else {"pipeline": pipeline})
+    base = engine.base_features
     sample = features.sample(min(samples, len(features)), random_state=RANDOM_STATE)
     expected = runtime_scores(pipeline, sample)
 
@@ -175,14 +186,20 @@ def check_runtime_parity(pipeline: Pipeline, features: pd.DataFrame, samples: in
         if frame is None:
             return None
         row = frame.loc[position]
-        means = {name: row[f"baseline_{name}"] for name in BASE_FEATURES}
+        means = {name: row[f"baseline_{name}"] for name in base}
         if any(pd.isna(value) for value in means.values()):
             return {"means": {}, "samples": 0}
         return {"means": {k: float(v) for k, v in means.items()}, "samples": int(row["baseline_samples"])}
 
+    def metrics_for(position, row):
+        metrics = {name: row[name] for name in base}
+        if frame is not None and "prior_data_exports" in frame.columns:
+            metrics["prior_data_exports"] = frame.loc[position, "prior_data_exports"]
+        return metrics
+
     async def score_all():
         return [(await engine.evaluate_session_activity(
-                    "eval", {name: row[name] for name in BASE_FEATURES}, None,
+                    "eval", metrics_for(position, row), None,
                     baseline=baseline_for(position)))["anomaly_score"]
                 for position, row in sample.iterrows()]
 
@@ -321,17 +338,29 @@ def main() -> None:
     parser.add_argument("--label-mode", choices=["auto", "events", "window"], default="auto")
     parser.add_argument("--temporal-split", type=float, default=0.70,
                         help="Fraction of calendar days used for fitting in the temporal hold-out")
-    parser.add_argument("--model", choices=["v1", "v2", "both"], default="both",
-                        help="Feature set to evaluate (default both, side by side)")
+    parser.add_argument("--model", choices=["v1", "v2", "v3", "both", "all"], default="all",
+                        help="Feature set to evaluate (default all, side by side; both = v1 and v2)")
     args = parser.parse_args()
 
     training = load_training_module(TRAINING_SCRIPT)
     v2 = load_training_module(TRAINING_SCRIPT_V2)
+    v3 = load_training_module(TRAINING_SCRIPT_V3)
+    wanted = {"v1": {"v1"}, "v2": {"v2"}, "v3": {"v3"}, "both": {"v1", "v2"},
+              "all": {"v1", "v2", "v3"}}[args.model]
+    if "v3" in wanted and not v3.DEVICE_PATH.is_file():
+        print(f"{v3.DEVICE_PATH} not found: skipping v3.")
+        wanted.discard("v3")
     print("Building user-day features from", training.LOGON_PATH.parent)
     matrix = training.build_user_day_matrix()
     frame = v2.add_relative_features(matrix)
+    frame3 = None
+    if "v3" in wanted:
+        # v3 adds the few user-days that have USB activity but no logon or file event.
+        frame3 = v3.add_relative_features(v3.add_export_column(matrix, v3.device_exports()))
     insiders = load_insiders(args.answers, args.release)
     y_true, label_source = label_user_days(frame.index, insiders, args.answers, args.label_mode)
+    y_true3 = None if frame3 is None else label_user_days(frame3.index, insiders, args.answers,
+                                                           args.label_mode)[0]
     print(f"Labels: {label_source} mode, {len(insiders)} insider records, "
           f"{int(y_true.sum()):,} malicious of {len(y_true):,} user-days")
 
@@ -344,6 +373,7 @@ def main() -> None:
                  "first_day": str(min(frame.index.get_level_values(1))),
                  "last_day": str(max(frame.index.get_level_values(1))),
                  "user_days_with_baseline": int((frame["baseline_samples"] >= v2.MIN_HISTORY).sum()),
+                 "device_csv": str(v3.DEVICE_PATH) if "v3" in wanted else None,
                  "label_source": label_source, "insider_records": int(len(insiders)),
                  "malicious_user_days": int(y_true.sum())},
         "model": {"n_estimators": N_ESTIMATORS, "contamination": CONTAMINATION,
@@ -355,13 +385,22 @@ def main() -> None:
     v2_bundle = {"version": 2, "features": v2.FEATURES, "base_features": v2.BASE_FEATURES,
                  "relative_features": v2.RELATIVE_FEATURES, "window_days": v2.WINDOW_DAYS,
                  "min_history": v2.MIN_HISTORY}
-    if args.model in ("v1", "both"):
+    if "v1" in wanted:
         print("\n=== v1: population features ===")
         report["v1"] = evaluate_model("v1", frame[training.FEATURES], y_true, args.temporal_split)
-    if args.model in ("v2", "both"):
+    if "v2" in wanted:
         print("\n=== v2: population + per-user rolling baseline ===")
         report["v2"] = evaluate_model("v2", frame[v2.FEATURES], y_true, args.temporal_split,
                                       frame=frame, bundle=v2_bundle)
+    if "v3" in wanted:
+        print("\n=== v3: v2 + data exports (CERT USB connections) ===")
+        v3_bundle = {"version": 3, "features": v3.FEATURES, "base_features": v3.BASE_FEATURES,
+                     "relative_features": v3.RELATIVE_FEATURES, "flag_features": v3.FLAG_FEATURES,
+                     "window_days": v3.WINDOW_DAYS, "min_history": v3.MIN_HISTORY}
+        report["v3"] = evaluate_model("v3", frame3[v3.FEATURES], y_true3, args.temporal_split,
+                                      frame=frame3, bundle=v3_bundle)
+        report["v3"]["user_days"] = int(len(frame3))
+        report["v3"]["malicious_user_days"] = int(y_true3.sum())
 
     # The model currently deployed in app/ml, if present.
     if DEPLOYED_MODEL.is_file():
@@ -369,15 +408,19 @@ def main() -> None:
         artifact = joblib.load(DEPLOYED_MODEL)
         deployed = artifact.get("pipeline") if isinstance(artifact, dict) else artifact
         version = artifact.get("version", 1) if isinstance(artifact, dict) else 1
-        columns = v2.FEATURES if version == 2 else training.FEATURES
-        report["deployed_artifact_on_all_user_days"] = {"version": version, **evaluate(
-            f"Deployed artifact app/ml/behavioral_anomaly_model.joblib (version {version})",
-            deployed, frame[columns], y_true)}
+        target, labels = (frame3, y_true3) if version == 3 else (frame, y_true)
+        columns = {3: v3.FEATURES, 2: v2.FEATURES}.get(version, training.FEATURES)
+        if target is None:
+            columns = None
+        if columns is not None:
+            report["deployed_artifact_on_all_user_days"] = {"version": version, **evaluate(
+                f"Deployed artifact app/ml/behavioral_anomaly_model.joblib (version {version})",
+                deployed, target[columns], labels)}
 
     print("\n=== Summary ===")
     for tag, title in (("transductive", "All user-days"), ("temporal_holdout", "Temporal hold-out")):
         print(title)
-        for name in ("v1", "v2"):
+        for name in ("v1", "v2", "v3"):
             if name in report:
                 print(summary_row(name, report[name][tag]))
 

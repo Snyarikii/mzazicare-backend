@@ -101,7 +101,19 @@ python scripts/evaluate_ueba_iforest.py --answers ml/data/answers
 python -m alembic upgrade head                  # feature_means, sample_count and the baseline index
 ```
 
-The engine also loads a version 1 model file, in which case it scores without a baseline. The exfiltration rule (35 or more records or 10 MB) applies to both.
+The engine also loads a version 1 model file, in which case it scores without a baseline. The exfiltration rule (35 or more records or 10 MB) applies to every version.
+
+### Data exports (model version 3)
+
+Version 3 adds a seventh counter, `data_exports`: shares from the app and screenshots of patient screens. The app reports each one to `POST /api/v1/telemetry/data-export` (30 per minute), and every behavioral check counts the session's export events on the server, so a modified client cannot hide them. The model also gets the exports' relative feature and a `first_data_export` flag. A first-ever export after at least five baseline snapshots, or five or more exports at three times the user's norm, always needs step-up verification. CERT r4.2 has no mobile app, so its removable-drive connections (`device.csv`) stand in for exports in training:
+
+```powershell
+python ml/train_behavioral_model_v3.py          # needs ml/data/device.csv; archives the v2 model
+python scripts/evaluate_ueba_iforest.py --answers ml/data/answers   # v1, v2 and v3 side by side
+python -m alembic upgrade head                  # index for the export counts
+```
+
+On Android, screenshots of the app are blocked while the clinical privacy mask is on; with it off, they are detected and reported.
 
 ## API areas
 

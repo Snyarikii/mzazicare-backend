@@ -221,16 +221,31 @@ class EngineTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["model_version"], 1)
         self.assertFalse(engine.uses_baseline)
 
-    async def test_deployed_artifact_scores_a_spike_above_the_same_activity_as_routine(self):
+    async def test_deployed_artifact_finds_a_spike_more_unusual_than_the_same_routine_activity(self):
         engine = BehavioralAnomalyEngine()
         if not engine.uses_baseline:
-            self.skipTest("Deployed behavioral artifact is not version 2")
-        spike = {**QUIET, "records_accessed_count": 30, "total_payload_bytes": 60000}
-        unusual = await engine.evaluate_session_activity("user", spike, None, baseline=baseline())
-        routine = await engine.evaluate_session_activity(
-            "user", spike, None, baseline=baseline(records_accessed_count=30.0, total_payload_bytes=60000.0))
-        self.assertGreater(unusual["anomaly_score"], routine["anomaly_score"])
+            self.skipTest("Deployed behavioral artifact has no per-user baseline (version 1)")
 
+        class Recorder:
+            """Pass-through to the real pipeline that keeps its decision values."""
+            def __init__(self, pipeline):
+                self.pipeline, self.named_steps, self.decisions = pipeline, pipeline.named_steps, []
+
+            def decision_function(self, frame):
+                values = self.pipeline.decision_function(frame)
+                self.decisions.append(float(values[0]))
+                return values
+
+            def predict(self, frame):
+                return self.pipeline.predict(frame)
+
+        engine.model = Recorder(engine.model)
+        spike = {**QUIET, "records_accessed_count": 30, "total_payload_bytes": 60000}
+        await engine.evaluate_session_activity("user", spike, None, baseline=baseline())
+        await engine.evaluate_session_activity(
+            "user", spike, None, baseline=baseline(records_accessed_count=30.0, total_payload_bytes=60000.0))
+        unusual, routine = engine.model.decisions  # Lower decision values are more anomalous.
+        self.assertLess(unusual, routine)
 
 if __name__ == "__main__":
     unittest.main()
